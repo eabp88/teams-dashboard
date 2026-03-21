@@ -331,7 +331,7 @@ const msalApp = new msal.PublicClientApplication({
 });
 
 let account=null, siteId=null, listId=null, data=[], isAdmin=false;
-let sortKey='', sortDir=1, parsedRows=[];
+let sortKey='', sortDir=1, parsedRows=[], toastTimer=null;
 
 // ══════════════════════════════════════════════════
 // AUTH
@@ -682,7 +682,6 @@ function showLoading(msg){document.getElementById('loadingText').textContent=msg
 function hideLoading(){document.getElementById('loadingOverlay').style.display='none';}
 function show(id){document.getElementById(id).style.display=id==='loginScreen'?'flex':'block';}
 function hide(id){document.getElementById(id).style.display='none';}
-let toastTimer;
 function showToast(msg,type='success'){const t=document.getElementById('toast');t.textContent=msg;t.className=type;t.style.display='block';clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.style.display='none',4000);}
 function today(){return new Date().toISOString().slice(0,10);}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
