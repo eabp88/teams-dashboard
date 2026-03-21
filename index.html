@@ -4,6 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Teams Call Dashboard</title>
+<script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <style>
   :root{
@@ -14,35 +15,33 @@
   *{box-sizing:border-box;margin:0;padding:0}
   body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;overflow-x:hidden}
 
-  /* ── SETUP BANNER ── */
-  #setupBanner{background:linear-gradient(135deg,#1a1f35,#141720);border-bottom:2px solid var(--accent);padding:20px 32px;display:none}
-  #setupBanner h2{font-size:15px;font-weight:600;margin-bottom:4px;color:var(--accent)}
-  #setupBanner p{font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:12px}
-  .setup-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-  .setup-row input{flex:1;min-width:280px;background:var(--bg);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:12px;padding:9px 14px;outline:none}
-  .setup-row input:focus{border-color:var(--accent)}
-  .setup-row input::placeholder{color:var(--muted)}
+  #loginScreen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:24px;padding:32px}
+  .login-card{background:var(--surface);border:1px solid var(--border2);border-radius:20px;padding:48px 40px;text-align:center;max-width:420px;width:100%}
+  .login-logo{width:56px;height:56px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 20px}
+  .login-card h1{font-size:22px;font-weight:700;margin-bottom:8px}
+  .login-card p{color:var(--muted);font-size:14px;margin-bottom:32px;line-height:1.6}
+  .ms-btn{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;padding:14px 20px;background:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;color:#1a1a1a;transition:all .15s}
+  .ms-btn:hover{background:#f0f0f0;transform:translateY(-1px)}
+  .ms-btn svg{width:20px;height:20px;flex-shrink:0}
 
-  /* ── CONNECTION STATUS ── */
-  #connStatus{display:flex;align-items:center;gap:8px;padding:8px 32px;font-size:12px;border-bottom:1px solid var(--border);background:var(--surface)}
+  #connBar{display:flex;align-items:center;gap:10px;padding:7px 26px;font-size:12px;border-bottom:1px solid var(--border);background:var(--surface);flex-wrap:wrap}
   .conn-dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex-shrink:0}
-  .conn-dot.connected{background:var(--green);box-shadow:0 0 6px var(--green)}
-  .conn-dot.connecting{background:var(--yellow);animation:pulse 1s infinite}
-  .conn-dot.error{background:var(--red)}
+  .conn-dot.ok{background:var(--green);box-shadow:0 0 6px var(--green)}
+  .conn-dot.busy{background:var(--yellow);animation:pulse 1s infinite}
+  .conn-dot.err{background:var(--red)}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 
-  /* ── HEADER ── */
-  header{display:flex;align-items:center;justify-content:space-between;padding:16px 32px;border-bottom:1px solid var(--border);background:var(--surface);position:sticky;top:0;z-index:100}
+  header{display:flex;align-items:center;justify-content:space-between;padding:13px 26px;border-bottom:1px solid var(--border);background:var(--surface);position:sticky;top:0;z-index:100;flex-wrap:wrap;gap:10px}
   .logo{display:flex;align-items:center;gap:10px}
   .logo-icon{width:32px;height:32px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px}
-  .logo h1{font-size:16px;font-weight:600;letter-spacing:-.3px}
+  .logo h1{font-size:15px;font-weight:600;letter-spacing:-.3px}
   .logo span{font-size:11px;color:var(--muted);font-family:var(--mono)}
-  .header-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-  .user-chip{display:flex;align-items:center;gap:7px;background:var(--surface2);border:1px solid var(--border2);border-radius:20px;padding:4px 12px 4px 8px;font-size:12px}
-  .user-avatar{width:20px;height:20px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700}
+  .header-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .user-chip{display:flex;align-items:center;gap:7px;background:var(--surface2);border:1px solid var(--border2);border-radius:20px;padding:4px 12px 4px 6px;font-size:12px}
+  .user-av{width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff}
   .admin-badge{background:rgba(245,197,66,.15);color:var(--yellow);border-radius:4px;padding:1px 6px;font-size:10px;font-weight:700;border:1px solid rgba(245,197,66,.3)}
 
-  .btn{padding:8px 16px;border-radius:7px;font-size:13px;font-weight:500;cursor:pointer;border:none;font-family:var(--sans);transition:all .15s}
+  .btn{padding:7px 14px;border-radius:7px;font-size:13px;font-weight:500;cursor:pointer;border:none;font-family:var(--sans);transition:all .15s;white-space:nowrap}
   .btn-ghost{background:transparent;border:1px solid var(--border2);color:var(--muted)}
   .btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
   .btn-primary{background:var(--accent);color:#fff}
@@ -50,257 +49,229 @@
   .btn-primary:disabled{opacity:.4;cursor:default;pointer-events:none}
   .btn-danger{background:transparent;border:1px solid var(--red);color:var(--red)}
   .btn-danger:hover{background:var(--red);color:#fff}
-  .btn-sm{padding:5px 11px;font-size:12px}
+  .btn-sm{padding:5px 10px;font-size:12px}
 
-  main{padding:24px 32px}
+  main{padding:20px 26px}
 
-  /* ── IMPORT ZONE ── */
-  #importZone{background:var(--surface);border:1.5px dashed var(--border2);border-radius:14px;padding:36px;text-align:center;margin-bottom:24px}
+  #importZone{background:var(--surface);border:1.5px dashed var(--border2);border-radius:14px;padding:40px;text-align:center;margin-bottom:20px}
   #importZone h2{font-size:17px;font-weight:600;margin-bottom:8px}
   #importZone p{color:var(--muted);font-size:13px;margin-bottom:20px;line-height:1.6}
-  .import-options{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+  .import-opts{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
 
-  /* ── INFO BAR ── */
-  #infoBar{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:11px 18px;margin-bottom:18px;display:none;align-items:center;gap:16px;flex-wrap:wrap}
-  .info-pill{font-size:12px;color:var(--muted)}
-  .info-pill strong{color:var(--text)}
-  .info-pill.green strong{color:var(--green)}
+  #infoBar{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 16px;margin-bottom:14px;display:none;align-items:center;gap:14px;flex-wrap:wrap}
+  .info-pill{font-size:12px;color:var(--muted)}.info-pill strong{color:var(--text)}
 
-  /* ── STATS ── */
-  .stats-bar{display:flex;gap:14px;margin-bottom:20px;flex-wrap:wrap}
-  .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:14px 20px;flex:1;min-width:130px}
-  .stat-card .label{font-size:11px;color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
-  .stat-card .value{font-size:24px;font-weight:600;font-family:var(--mono)}
-  .stat-card.accent .value{color:var(--accent)}.stat-card.green .value{color:var(--green)}.stat-card.yellow .value{color:var(--yellow)}.stat-card.red .value{color:var(--red)}
+  .stats-bar{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+  .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:12px 18px;flex:1;min-width:120px}
+  .stat-card .lbl{font-size:11px;color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
+  .stat-card .val{font-size:22px;font-weight:600;font-family:var(--mono)}
+  .c-accent .val{color:var(--accent)}.c-red .val{color:var(--red)}.c-green .val{color:var(--green)}.c-yellow .val{color:var(--yellow)}
 
-  /* ── FILTERS ── */
-  .filter-bar{display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap;align-items:center}
-  .search-wrap{position:relative;flex:1;min-width:200px}
-  .search-wrap svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);opacity:.4;pointer-events:none}
-  .search-wrap input{width:100%;background:var(--surface);border:1px solid var(--border2);border-radius:9px;color:var(--text);font-family:var(--sans);font-size:13px;padding:9px 12px 9px 38px;outline:none}
+  .filter-bar{display:flex;gap:9px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+  .search-wrap{position:relative;flex:1;min-width:180px}
+  .search-wrap svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);opacity:.4;pointer-events:none}
+  .search-wrap input{width:100%;background:var(--surface);border:1px solid var(--border2);border-radius:9px;color:var(--text);font-family:var(--sans);font-size:13px;padding:8px 12px 8px 36px;outline:none}
   .search-wrap input:focus{border-color:var(--accent)}
-  .filter-select{background:var(--surface);border:1px solid var(--border2);border-radius:9px;color:var(--text);font-family:var(--sans);font-size:13px;padding:9px 12px;outline:none;cursor:pointer}
-  .filter-select:focus{border-color:var(--accent)}
-  .filter-select option{background:var(--surface2)}
-  input[type="date"].filter-select{color-scheme:dark}
+  .fsel{background:var(--surface);border:1px solid var(--border2);border-radius:9px;color:var(--text);font-family:var(--sans);font-size:13px;padding:8px 12px;outline:none;cursor:pointer}
+  .fsel option{background:var(--surface2)}
+  input[type="date"].fsel{color-scheme:dark}
 
-  /* ── TABLE ── */
   .table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:13px;overflow:hidden}
-  .table-header-row{display:flex;align-items:center;padding:12px 20px;border-bottom:1px solid var(--border);justify-content:space-between;gap:10px;flex-wrap:wrap}
-  .table-header-row .count{font-size:13px;color:var(--muted)}
+  .tbl-hdr{display:flex;align-items:center;padding:10px 16px;border-bottom:1px solid var(--border);justify-content:space-between;gap:10px;flex-wrap:wrap}
+  .tbl-hdr .count{font-size:13px;color:var(--muted)}
   table{width:100%;border-collapse:collapse;font-size:13px}
-  thead th{text-align:left;padding:13px 18px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);background:var(--surface2);cursor:pointer;user-select:none;white-space:nowrap}
+  thead th{text-align:left;padding:11px 15px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);background:var(--surface2);cursor:pointer;user-select:none;white-space:nowrap}
   thead th:hover{color:var(--text)}
-  tbody tr{border-bottom:1px solid var(--border);transition:background .12s;animation:rowIn .22s ease both}
-  @keyframes rowIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+  tbody tr{border-bottom:1px solid var(--border);transition:background .1s;animation:rowIn .2s ease both}
+  @keyframes rowIn{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
   tbody tr:hover{background:var(--surface2)}
   tbody tr:last-child{border-bottom:none}
-  td{padding:12px 18px;vertical-align:middle}
-  .agent-cell{display:flex;align-items:center;gap:10px}
-  .avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;color:#fff}
-  .agent-name{font-weight:500}
-  .agent-id{font-size:11px;color:var(--muted);font-family:var(--mono)}
-  .status-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
-  .status-dot{width:6px;height:6px;border-radius:50%}
-  .status-busy{background:rgba(242,87,87,.15);color:var(--red)}.status-busy .status-dot{background:var(--red)}
-  .status-ready{background:rgba(34,199,122,.15);color:var(--green)}.status-ready .status-dot{background:var(--green)}
-  .status-break{background:rgba(245,197,66,.15);color:var(--yellow)}.status-break .status-dot{background:var(--yellow)}
-  .status-offline{background:rgba(107,116,148,.15);color:var(--muted)}.status-offline .status-dot{background:var(--muted)}
+  td{padding:11px 15px;vertical-align:middle}
+  .agent-cell{display:flex;align-items:center;gap:9px}
+  .avatar{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;color:#fff}
+  .agent-name{font-weight:500}.agent-id{font-size:10px;color:var(--muted);font-family:var(--mono)}
+  .sbadge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
+  .sdot{width:6px;height:6px;border-radius:50%}
+  .s-busy{background:rgba(242,87,87,.15);color:var(--red)}.s-busy .sdot{background:var(--red)}
+  .s-ready{background:rgba(34,199,122,.15);color:var(--green)}.s-ready .sdot{background:var(--green)}
+  .s-break{background:rgba(245,197,66,.15);color:var(--yellow)}.s-break .sdot{background:var(--yellow)}
+  .s-offline{background:rgba(107,116,148,.15);color:var(--muted)}.s-offline .sdot{background:var(--muted)}
   .mono-sm{font-family:var(--mono);font-size:11px;color:var(--muted)}
-  .sip{font-family:var(--mono);font-size:11px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .dept-badge{background:rgba(79,142,247,.1);color:var(--accent);border-radius:6px;padding:3px 9px;font-size:11px;font-weight:500;white-space:nowrap}
-  .icon-btn{width:28px;height:28px;border-radius:7px;border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .12s;font-size:13px}
+  .sip{font-family:var(--mono);font-size:11px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .dept-badge{background:rgba(79,142,247,.1);color:var(--accent);border-radius:6px;padding:2px 8px;font-size:11px;font-weight:500;white-space:nowrap}
+  .icon-btn{width:27px;height:27px;border-radius:6px;border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .1s;font-size:12px}
   .icon-btn:hover{border-color:var(--red);color:var(--red)}
-  .icon-btn:disabled{opacity:.25;cursor:default;pointer-events:none}
-  .empty-state{text-align:center;padding:60px 32px;color:var(--muted)}
-  .empty-state .icon{font-size:42px;margin-bottom:12px;opacity:.4}
-  .empty-state h3{font-size:16px;font-weight:500;margin-bottom:6px;color:var(--text)}
-  .empty-state p{font-size:13px;line-height:1.6}
+  .empty-state{text-align:center;padding:56px 32px;color:var(--muted)}
+  .empty-state .icon{font-size:40px;margin-bottom:12px;opacity:.4}
+  .empty-state h3{font-size:15px;font-weight:500;margin-bottom:6px;color:var(--text)}
 
-  /* ── LOADING OVERLAY ── */
-  #loadingOverlay{position:fixed;inset:0;background:rgba(13,15,20,.85);z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
-  .spinner{width:36px;height:36px;border:3px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+  #loadingOverlay{position:fixed;inset:0;background:rgba(13,15,20,.88);z-index:500;display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px}
+  .spinner{width:34px;height:34px;border:3px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
   #loadingText{font-size:14px;color:var(--muted)}
 
-  /* ── MODAL ── */
   .modal-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:200;align-items:center;justify-content:center}
   .modal-backdrop.open{display:flex}
-  .modal{background:var(--surface);border:1px solid var(--border2);border-radius:16px;padding:28px;width:760px;max-width:96vw;max-height:92vh;overflow-y:auto}
-  .modal h3{font-size:16px;font-weight:600;margin-bottom:6px}
-  .modal>p{color:var(--muted);font-size:13px;margin-bottom:16px;line-height:1.6}
-  .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:16px}
-  .steps{display:flex;gap:0;margin-bottom:20px}
+  .modal{background:var(--surface);border:1px solid var(--border2);border-radius:16px;padding:26px;width:740px;max-width:96vw;max-height:92vh;overflow-y:auto}
+  .modal h3{font-size:15px;font-weight:600;margin-bottom:6px}
+  .modal>p{color:var(--muted);font-size:13px;margin-bottom:14px;line-height:1.6}
+  .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:14px}
+  .steps{display:flex;margin-bottom:18px}
   .step{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;position:relative}
   .step:not(:last-child)::after{content:'';position:absolute;top:13px;left:58%;width:84%;height:1px;background:var(--border2)}
   .step-num{width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;position:relative;z-index:1}
-  .step-label{font-size:11px;color:var(--muted);text-align:center;line-height:1.4}
-  #pasteInput{width:100%;height:170px;background:var(--bg);border:2px solid var(--border2);border-radius:11px;color:var(--text);font-family:var(--mono);font-size:12px;padding:14px 16px;resize:vertical;outline:none;line-height:1.7;display:block;transition:border-color .2s;margin-bottom:12px}
-  #pasteInput:focus{border-color:var(--accent)}
-  #pasteInput.has-content{border-color:var(--green)}
-  .parse-status{padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:10px;display:none}
-  .parse-status.ok{background:rgba(34,199,122,.1);border:1px solid rgba(34,199,122,.3);color:var(--green)}
-  .parse-status.warn{background:rgba(245,197,66,.1);border:1px solid rgba(245,197,66,.3);color:var(--yellow)}
-  .parse-status.err{background:rgba(242,87,87,.1);border:1px solid rgba(242,87,87,.3);color:var(--red)}
-  .raw-debug{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:10px;max-height:130px;overflow-y:auto;display:none;white-space:pre-wrap;word-break:break-all;line-height:1.6}
-  .preview-wrap{max-height:200px;overflow-y:auto;border:1px solid var(--border2);border-radius:9px;margin-bottom:4px;display:none}
+  .step-lbl{font-size:11px;color:var(--muted);text-align:center;line-height:1.4}
+  #pasteInput{width:100%;height:160px;background:var(--bg);border:2px solid var(--border2);border-radius:11px;color:var(--text);font-family:var(--mono);font-size:12px;padding:13px 15px;resize:vertical;outline:none;line-height:1.7;display:block;transition:border-color .2s;margin-bottom:11px}
+  #pasteInput:focus{border-color:var(--accent)}#pasteInput.has-content{border-color:var(--green)}
+  .pstatus{padding:9px 13px;border-radius:8px;font-size:13px;margin-bottom:9px;display:none}
+  .pstatus.ok{background:rgba(34,199,122,.1);border:1px solid rgba(34,199,122,.3);color:var(--green)}
+  .pstatus.err{background:rgba(242,87,87,.1);border:1px solid rgba(242,87,87,.3);color:var(--red)}
+  .raw-debug{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 13px;font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:9px;max-height:120px;overflow-y:auto;display:none;white-space:pre-wrap;word-break:break-all;line-height:1.6}
+  .preview-wrap{max-height:190px;overflow-y:auto;border:1px solid var(--border2);border-radius:9px;margin-bottom:4px;display:none}
   .preview-wrap table{width:100%;border-collapse:collapse;font-size:11px}
-  .preview-wrap th{background:var(--surface2);padding:7px 10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);position:sticky;top:0;white-space:nowrap}
-  .preview-wrap td{padding:6px 10px;border-bottom:1px solid var(--border);color:var(--text);white-space:nowrap;max-width:150px;overflow:hidden;text-overflow:ellipsis}
+  .preview-wrap th{background:var(--surface2);padding:6px 9px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);position:sticky;top:0;white-space:nowrap}
+  .preview-wrap td{padding:5px 9px;border-bottom:1px solid var(--border);color:var(--text);white-space:nowrap;max-width:140px;overflow:hidden;text-overflow:ellipsis}
   .preview-wrap tr:last-child td{border-bottom:none}
-  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
-  .form-field{display:flex;flex-direction:column;gap:6px}
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-bottom:13px}
+  .form-field{display:flex;flex-direction:column;gap:5px}
   .form-field label{font-size:12px;color:var(--muted);font-weight:500}
-  .form-field input,.form-field select{background:var(--bg);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--sans);font-size:13px;padding:9px 12px;outline:none}
+  .form-field input,.form-field select{background:var(--bg);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--sans);font-size:13px;padding:8px 11px;outline:none}
   .form-field input:focus,.form-field select:focus{border-color:var(--accent)}
   .form-field select option{background:var(--surface2)}
-  kbd{background:var(--surface2);border:1px solid var(--border2);border-radius:4px;padding:1px 6px;font-family:var(--mono);font-size:11px}
-
-  #toast{position:fixed;bottom:24px;right:24px;background:var(--surface2);border:1px solid var(--border2);border-radius:10px;padding:12px 18px;font-size:13px;z-index:999;display:none;max-width:340px;line-height:1.5}
+  kbd{background:var(--surface2);border:1px solid var(--border2);border-radius:4px;padding:1px 5px;font-family:var(--mono);font-size:11px}
+  #toast{position:fixed;bottom:22px;right:22px;background:var(--surface2);border:1px solid var(--border2);border-radius:10px;padding:11px 16px;font-size:13px;z-index:999;display:none;max-width:340px;line-height:1.5}
   #toast.success{border-color:var(--green);color:var(--green)}#toast.error{border-color:var(--red);color:var(--red)}#toast.info{border-color:var(--accent);color:var(--accent)}
 </style>
 </head>
 <body>
 
-<!-- ══ SETUP BANNER (shown until site URL is configured) ══ -->
-<div id="setupBanner">
-  <h2>⚙️ One-time Setup Required</h2>
-  <p>Enter your SharePoint site URL below and click Save. This is stored in your browser and only needs to be done once per device.<br>
-  Example: <code style="font-family:var(--mono);color:var(--accent)">https://yourcompany.sharepoint.com/sites/yoursite</code></p>
-  <div class="setup-row">
-    <input id="siteUrlInput" type="text" placeholder="https://yourcompany.sharepoint.com/sites/yoursite" autocomplete="off" spellcheck="false"/>
-    <button class="btn btn-primary" onclick="saveSiteUrl()">Save &amp; Connect</button>
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">📞</div>
+    <h1>Teams Call Dashboard</h1>
+    <p>Sign in with your company Microsoft account to access the shared Twilio call data.</p>
+    <button class="ms-btn" onclick="signIn()">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 23 23"><path fill="#f3f3f3" d="M0 0h23v23H0z"/><path fill="#f35325" d="M1 1h10v10H1z"/><path fill="#81bc06" d="M12 1h10v10H12z"/><path fill="#05a6f0" d="M1 12h10v10H1z"/><path fill="#ffba08" d="M12 12h10v10H12z"/></svg>
+      Sign in with Microsoft
+    </button>
   </div>
 </div>
 
-<!-- ══ CONNECTION STATUS BAR ══ -->
-<div id="connStatus">
-  <div class="conn-dot" id="connDot"></div>
-  <span id="connText" style="color:var(--muted)">Not connected</span>
-  <span style="margin-left:auto;display:flex;gap:8px">
-    <button class="btn btn-ghost btn-sm" onclick="openModal('setupModal')" title="Change SharePoint URL">⚙️ Settings</button>
-  </span>
-</div>
-
-<!-- ══ HEADER ══ -->
-<header>
-  <div class="logo">
-    <div class="logo-icon">📞</div>
-    <div>
-      <h1>Teams Call Dashboard</h1>
-      <span id="siteLabel">Twilio Flex · SharePoint Sync</span>
-    </div>
-  </div>
-  <div class="header-right">
-    <div class="user-chip" id="userChip" style="display:none">
-      <div class="user-avatar" id="userInitials">?</div>
-      <span id="userName">Loading…</span>
-      <span class="admin-badge" id="adminBadge" style="display:none">ADMIN</span>
-    </div>
-    <button class="btn btn-ghost" onclick="refreshData()" title="Reload from SharePoint">↻ Refresh</button>
-    <button class="btn btn-ghost" onclick="openModal('pasteModal')">📋 Paste from Twilio</button>
-    <button class="btn btn-primary" onclick="openModal('manualModal')">+ Add Entry</button>
-  </div>
-</header>
-
-<main>
-  <div id="importZone">
-    <h2>📋 Connect &amp; Import Your Twilio Data</h2>
-    <p>This dashboard syncs with SharePoint — all colleagues see the same data in real time.<br>
-    Configure your SharePoint site above, then paste data from Twilio or add entries manually.</p>
-    <div class="import-options">
-      <button class="btn btn-primary" onclick="openModal('pasteModal')">📋 Paste from Twilio</button>
-      <button class="btn btn-ghost" onclick="openModal('manualModal')">✏️ Add Manually</button>
-    </div>
-  </div>
-
-  <div class="stats-bar" id="statsBar" style="display:none">
-    <div class="stat-card accent"><div class="label">Total Records</div><div class="value" id="statTotal">0</div></div>
-    <div class="stat-card red">   <div class="label">Busy / On Call</div><div class="value" id="statBusy">0</div></div>
-    <div class="stat-card green"> <div class="label">Ready</div>         <div class="value" id="statReady">0</div></div>
-    <div class="stat-card yellow"><div class="label">On Break</div>       <div class="value" id="statBreak">0</div></div>
-  </div>
-
-  <div id="infoBar">
-    <span class="info-pill green">🟢 <strong>SharePoint connected</strong></span>
-    <span class="info-pill">💾 <strong id="infoCount">0</strong> records</span>
-    <span class="info-pill">🕒 Last refreshed: <strong id="infoTime">—</strong></span>
-    <span style="margin-left:auto;display:flex;gap:8px">
-      <button class="btn btn-ghost btn-sm" onclick="exportCSV()">⬇ Export CSV</button>
-      <button class="btn btn-danger btn-sm" id="clearAllBtn" onclick="clearAllData()" style="display:none">🗑 Clear All</button>
+<div id="app" style="display:none">
+  <div id="connBar">
+    <div class="conn-dot" id="connDot"></div>
+    <span id="connText" style="color:var(--muted)">Connecting…</span>
+    <span style="margin-left:auto">
+      <button class="btn btn-ghost btn-sm" onclick="signOut()">Sign out</button>
     </span>
   </div>
 
-  <div class="filter-bar" id="filterBar" style="display:none">
-    <div class="search-wrap">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-      <input id="searchInput" type="text" placeholder="Search agent name…" oninput="filterTable()"/>
+  <header>
+    <div class="logo">
+      <div class="logo-icon">📞</div>
+      <div><h1>Teams Call Dashboard</h1><span>Twilio Flex · SharePoint Sync</span></div>
     </div>
-    <select class="filter-select" id="statusFilter" onchange="filterTable()">
-      <option value="">All Statuses</option>
-      <option value="busy">Busy Calls</option>
-      <option value="ready">Ready</option>
-      <option value="break">Break</option>
-      <option value="offline">Offline</option>
-    </select>
-    <select class="filter-select" id="deptFilter" onchange="filterTable()"><option value="">All Departments</option></select>
-    <input type="date" class="filter-select" id="dateFilter" onchange="filterTable()" title="Filter by date"/>
-    <button class="btn btn-ghost" onclick="clearFilters()">✕ Clear filters</button>
-  </div>
+    <div class="header-right">
+      <div class="user-chip" id="userChip">
+        <div class="user-av" id="userAv">?</div>
+        <span id="userName">…</span>
+        <span class="admin-badge" id="adminBadge" style="display:none">ADMIN</span>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="refreshData()">↻ Refresh</button>
+      <button class="btn btn-ghost" onclick="openModal('pasteModal')">📋 Paste from Twilio</button>
+      <button class="btn btn-primary" onclick="openModal('manualModal')">+ Add Entry</button>
+    </div>
+  </header>
 
-  <div class="table-wrap" id="tableWrap" style="display:none">
-    <div class="table-header-row">
-      <span class="count" id="rowCount">0 records</span>
+  <main>
+    <div id="importZone">
+      <h2>📋 No records yet</h2>
+      <p>Paste data from Twilio or add entries manually.<br>All records save to SharePoint and are instantly visible to all colleagues.</p>
+      <div class="import-opts">
+        <button class="btn btn-primary" onclick="openModal('pasteModal')">📋 Paste from Twilio</button>
+        <button class="btn btn-ghost" onclick="openModal('manualModal')">✏️ Add Manually</button>
+      </div>
     </div>
-    <table>
-      <thead><tr>
-        <th onclick="sortTable('AgentName')">Agent ↕</th>
-        <th onclick="sortTable('Status')">Status ↕</th>
-        <th>Call Number</th>
-        <th onclick="sortTable('CallDuration')">Call Duration ↕</th>
-        <th onclick="sortTable('EntryDate')">Date ↕</th>
-        <th onclick="sortTable('Department')">Department ↕</th>
-        <th>Provider</th>
-        <th id="actionsHeader">Actions</th>
-      </tr></thead>
-      <tbody id="tableBody"></tbody>
-    </table>
-    <div class="empty-state" id="noResults" style="display:none">
-      <div class="icon">🔍</div><h3>No results</h3><p>Try adjusting your search or filters.</p>
-    </div>
-  </div>
-</main>
 
-<!-- ══ LOADING OVERLAY ══ -->
-<div id="loadingOverlay" style="display:none">
-  <div class="spinner"></div>
-  <div id="loadingText">Connecting to SharePoint…</div>
+    <div class="stats-bar" id="statsBar" style="display:none">
+      <div class="stat-card c-accent"><div class="lbl">Total Records</div><div class="val" id="statTotal">0</div></div>
+      <div class="stat-card c-red">  <div class="lbl">Busy / On Call</div><div class="val" id="statBusy">0</div></div>
+      <div class="stat-card c-green"><div class="lbl">Ready</div>         <div class="val" id="statReady">0</div></div>
+      <div class="stat-card c-yellow"><div class="lbl">On Break</div>     <div class="val" id="statBreak">0</div></div>
+    </div>
+
+    <div id="infoBar">
+      <span class="info-pill">🟢 <strong>SharePoint connected</strong></span>
+      <span class="info-pill">💾 <strong id="infoCount">0</strong> records</span>
+      <span class="info-pill">🕒 Refreshed: <strong id="infoTime">—</strong></span>
+      <span style="margin-left:auto;display:flex;gap:8px">
+        <button class="btn btn-ghost btn-sm" onclick="exportCSV()">⬇ Export CSV</button>
+        <button class="btn btn-danger btn-sm" id="clearAllBtn" onclick="clearAllData()" style="display:none">🗑 Clear All</button>
+      </span>
+    </div>
+
+    <div class="filter-bar" id="filterBar" style="display:none">
+      <div class="search-wrap">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input id="searchInput" type="text" placeholder="Search agent name…" oninput="filterTable()"/>
+      </div>
+      <select class="fsel" id="statusFilter" onchange="filterTable()">
+        <option value="">All Statuses</option><option value="busy">Busy Calls</option>
+        <option value="ready">Ready</option><option value="break">Break</option><option value="offline">Offline</option>
+      </select>
+      <select class="fsel" id="deptFilter" onchange="filterTable()"><option value="">All Departments</option></select>
+      <input type="date" class="fsel" id="dateFilter" onchange="filterTable()"/>
+      <button class="btn btn-ghost btn-sm" onclick="clearFilters()">✕ Clear</button>
+    </div>
+
+    <div class="table-wrap" id="tableWrap" style="display:none">
+      <div class="tbl-hdr">
+        <span class="count" id="rowCount">0 records</span>
+      </div>
+      <table>
+        <thead><tr>
+          <th onclick="sortTable('name')">Agent ↕</th>
+          <th onclick="sortTable('status')">Status ↕</th>
+          <th>Call Number</th>
+          <th onclick="sortTable('callDuration')">Duration ↕</th>
+          <th onclick="sortTable('date')">Date ↕</th>
+          <th onclick="sortTable('department')">Department ↕</th>
+          <th>Provider</th>
+          <th>Added By</th>
+          <th>Actions</th>
+        </tr></thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+      <div class="empty-state" id="noResults" style="display:none">
+        <div class="icon">🔍</div><h3>No results</h3><p>Adjust your search or filters.</p>
+      </div>
+    </div>
+  </main>
 </div>
 
-<!-- ══ PASTE MODAL ══ -->
+<div id="loadingOverlay"><div class="spinner"></div><div id="loadingText">Loading…</div></div>
+
+<!-- PASTE MODAL -->
 <div class="modal-backdrop" id="pasteModal">
   <div class="modal">
     <h3>📋 Paste from Twilio Flex</h3>
-    <p>In Twilio, select all agent rows → <kbd>Ctrl+C</kbd> → click the box below → <kbd>Ctrl+V</kbd>. Records will be saved to SharePoint automatically.</p>
+    <p>In Twilio select all agent rows → <kbd>Ctrl+C</kbd> → click box below → <kbd>Ctrl+V</kbd>. Records save to SharePoint automatically.</p>
     <div class="steps">
-      <div class="step"><div class="step-num">1</div><div class="step-label">Select rows<br>in Twilio</div></div>
-      <div class="step"><div class="step-num">2</div><div class="step-label">Press<br><kbd>Ctrl+C</kbd></div></div>
-      <div class="step"><div class="step-num">3</div><div class="step-label">Click box<br>below</div></div>
-      <div class="step"><div class="step-num">4</div><div class="step-label">Press<br><kbd>Ctrl+V</kbd></div></div>
-      <div class="step"><div class="step-num">5</div><div class="step-label">Click<br>Import</div></div>
+      <div class="step"><div class="step-num">1</div><div class="step-lbl">Select rows<br>in Twilio</div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-lbl">Press<br><kbd>Ctrl+C</kbd></div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-lbl">Click box<br>below</div></div>
+      <div class="step"><div class="step-num">4</div><div class="step-lbl">Press<br><kbd>Ctrl+V</kbd></div></div>
+      <div class="step"><div class="step-num">5</div><div class="step-lbl">Click<br>Import</div></div>
     </div>
-    <textarea id="pasteInput"
-      placeholder="▶ Click here, then press Ctrl+V to paste your copied Twilio table data."
-      oninput="onPasteInput()" onpaste="scheduleParse()"></textarea>
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+    <textarea id="pasteInput" placeholder="▶ Click here, then press Ctrl+V to paste your Twilio data." oninput="onPasteInput()" onpaste="scheduleParse()"></textarea>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:9px">
       <label style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;cursor:pointer">
-        <input type="checkbox" id="showDebug" onchange="toggleDebug()" style="accent-color:var(--accent)"/>
-        Show raw pasted text (troubleshooting)
+        <input type="checkbox" id="showDebug" onchange="toggleDebug()" style="accent-color:var(--accent)"/> Show raw pasted text
       </label>
-      <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px" onclick="clearPaste()">Clear</button>
+      <button class="btn btn-ghost btn-sm" onclick="clearPaste()">Clear</button>
     </div>
     <div class="raw-debug" id="rawDebug"></div>
-    <div class="parse-status" id="parseStatus"></div>
+    <div class="pstatus" id="parseStatus"></div>
     <div class="preview-wrap" id="previewWrap"><table id="previewTable"></table></div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal('pasteModal')">Cancel</button>
@@ -309,16 +280,15 @@
   </div>
 </div>
 
-<!-- ══ MANUAL MODAL ══ -->
+<!-- MANUAL MODAL -->
 <div class="modal-backdrop" id="manualModal">
   <div class="modal">
     <h3>✏️ Add Entry Manually</h3>
-    <p>Fill in the agent call record. It will be saved to SharePoint immediately.</p>
+    <p>Fill in the agent call record. Saved to SharePoint and instantly visible to all colleagues.</p>
     <div class="form-grid">
-      <div class="form-field"><label>Agent Name *</label><input id="m_name" type="text" placeholder="e.g. Rodrigo Alejandro H."/></div>
+      <div class="form-field"><label>Agent Name *</label><input id="m_name" type="text" placeholder="Rodrigo Alejandro H."/></div>
       <div class="form-field"><label>Status *</label>
-        <select id="m_status"><option>Busy Calls</option><option>Ready</option><option>Break</option><option>Offline</option></select>
-      </div>
+        <select id="m_status"><option>Busy Calls</option><option>Ready</option><option>Break</option><option>Offline</option></select></div>
       <div class="form-field"><label>Status Duration</label><input id="m_statusDur" type="text" placeholder="10:23"/></div>
       <div class="form-field"><label>Call Number (SIP)</label><input id="m_callNum" type="text" placeholder="sip:+17025638631@..."/></div>
       <div class="form-field"><label>Call Duration</label><input id="m_callDur" type="text" placeholder="10m"/></div>
@@ -335,338 +305,220 @@
   </div>
 </div>
 
-<!-- ══ SETTINGS MODAL ══ -->
-<div class="modal-backdrop" id="setupModal">
-  <div class="modal" style="max-width:560px">
-    <h3>⚙️ SharePoint Settings</h3>
-    <p>Update your SharePoint site URL. The list name must be <strong>TeamCallData</strong>.</p>
-    <div class="form-field" style="margin-bottom:14px">
-      <label>SharePoint Site URL</label>
-      <input id="siteUrlEdit" type="text" placeholder="https://yourcompany.sharepoint.com/sites/yoursite" style="font-family:var(--mono);font-size:12px"/>
-    </div>
-    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px;font-size:12px;color:var(--muted);line-height:1.8;margin-bottom:4px">
-      <strong style="color:var(--text)">📋 SharePoint List setup checklist:</strong><br>
-      1. Go to your SharePoint site → <em>Site Contents</em> → <em>New</em> → <em>List</em><br>
-      2. Name it exactly: <code style="color:var(--accent);font-family:var(--mono)">TeamCallData</code><br>
-      3. Add these columns (all <em>Single line of text</em> type):<br>
-      &nbsp;&nbsp;<code style="color:var(--accent);font-family:var(--mono)">AgentName, Status, StatusDuration, CallNumber, CallDuration, CallChannel, EntryDate, AgentSID, Provider, Department, AddedBy</code><br>
-      4. Share the list with all colleagues (at minimum: <em>Contribute</em> permission)<br>
-      5. Admins who can delete: give them <em>Edit</em> or <em>Full Control</em>
-    </div>
-    <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="closeModal('setupModal')">Cancel</button>
-      <button class="btn btn-primary" onclick="saveSiteUrlFromModal()">Save &amp; Reconnect</button>
-    </div>
-  </div>
-</div>
-
 <div id="toast"></div>
 
 <script>
-// ════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════
 // CONFIG
-// ════════════════════════════════════════════════════════════
-const LIST_NAME    = 'TeamCallData';
-const LOCAL_KEY    = 'twilio_sp_siteurl';
-const ADMIN_KEY    = 'twilio_sp_isadmin';
+// ══════════════════════════════════════════════════
+const CLIENT_ID = '198a4127-4ad2-4d32-a0cb-beb6d48b3bb0';
+const TENANT_ID = '88d97709-f0ea-4a21-86f3-f603d653e7c9';
+const SP_HOST   = 'thefunctionary.sharepoint.com';
+const SITE_PATH = '/sites/flix.ops';
+const LIST_NAME = 'TeamCallData';
+const SCOPES    = ['https://graph.microsoft.com/Sites.ReadWrite.All'];
 
-let siteUrl    = '';
-let data       = [];
-let isAdmin    = false;
-let currentUser= '';
-let sortKey    = '';
-let sortDir    = 1;
-let parsedRows = [];
-let requestDigest = '';
-let digestExpiry  = 0;
+// ══════════════════════════════════════════════════
+// MSAL
+// ══════════════════════════════════════════════════
+const msalApp = new msal.PublicClientApplication({
+  auth:{
+    clientId: CLIENT_ID,
+    authority:`https://login.microsoftonline.com/${TENANT_ID}`,
+    redirectUri: window.location.origin + window.location.pathname,
+  },
+  cache:{ cacheLocation:'localStorage', storeAuthStateInCookie:true }
+});
 
-// ════════════════════════════════════════════════════════════
-// INIT
-// ════════════════════════════════════════════════════════════
+let account=null, siteId=null, listId=null, data=[], isAdmin=false;
+let sortKey='', sortDir=1, parsedRows=[];
+
+// ══════════════════════════════════════════════════
+// AUTH
+// ══════════════════════════════════════════════════
 async function init(){
-  siteUrl = localStorage.getItem(LOCAL_KEY)||'';
-  if(!siteUrl){
-    document.getElementById('setupBanner').style.display='block';
-    setConnStatus('error','Not configured — enter your SharePoint URL above');
-    return;
-  }
-  document.getElementById('siteUrlInput').value = siteUrl;
-  document.getElementById('siteUrlEdit').value  = siteUrl;
-  document.getElementById('setupBanner').style.display='none';
-  await connect();
+  showLoading('Checking login…');
+  try{
+    await msalApp.handleRedirectPromise();
+    const accounts=msalApp.getAllAccounts();
+    if(accounts.length>0){ account=accounts[0]; await startApp(); }
+    else{ hideLoading(); show('loginScreen'); }
+  }catch(e){ hideLoading(); show('loginScreen'); showToast('Auth error: '+e.message,'error'); }
 }
 
-async function connect(){
-  setConnStatus('connecting','Connecting to SharePoint…');
+async function signIn(){
+  try{
+    showLoading('Opening Microsoft sign-in…');
+    const res=await msalApp.loginPopup({scopes:SCOPES});
+    account=res.account;
+    await startApp();
+  }catch(e){ hideLoading(); showToast('Sign in failed. Please try again.','error'); }
+}
+
+function signOut(){
+  msalApp.logoutPopup({account});
+  account=null; hide('app'); show('loginScreen');
+}
+
+async function getToken(){
+  try{ return (await msalApp.acquireTokenSilent({scopes:SCOPES,account})).accessToken; }
+  catch(e){ return (await msalApp.acquireTokenPopup({scopes:SCOPES})).accessToken; }
+}
+
+async function graphFetch(method,path,body=null){
+  const token=await getToken();
+  const opts={method,headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json','Accept':'application/json'}};
+  if(body) opts.body=JSON.stringify(body);
+  const res=await fetch('https://graph.microsoft.com/v1.0'+path,opts);
+  if(!res.ok){ const t=await res.text().catch(()=>''); throw new Error(`Graph ${res.status}: ${t.slice(0,200)}`); }
+  if(res.status===204) return null;
+  return res.json();
+}
+
+// ══════════════════════════════════════════════════
+// START
+// ══════════════════════════════════════════════════
+async function startApp(){
+  hide('loginScreen'); show('app');
   showLoading('Connecting to SharePoint…');
   try{
-    await loadCurrentUser();
-    await checkAdminStatus();
+    const name=account.name||account.username;
+    const ini=name.split(' ').slice(0,2).map(w=>w[0]||'').join('').toUpperCase();
+    document.getElementById('userName').textContent=name;
+    document.getElementById('userAv').textContent=ini;
+
+    setConn('busy','Connecting…');
+    const site=await graphFetch('GET',`/sites/${SP_HOST}:${SITE_PATH}`);
+    siteId=site.id;
+
+    const lists=await graphFetch('GET',`/sites/${siteId}/lists?$filter=displayName eq '${LIST_NAME}'&$select=id`);
+    if(!lists.value||lists.value.length===0) throw new Error(`List "${LIST_NAME}" not found on your SharePoint site.`);
+    listId=lists.value[0].id;
+
+    await checkAdmin();
+    setConn('ok',`Connected · ${SP_HOST}${SITE_PATH}`);
     await refreshData();
-    setConnStatus('connected',`Connected to ${siteUrl}`);
-  } catch(e){
-    setConnStatus('error','Connection failed — check your site URL or permissions');
-    showToast('Could not connect to SharePoint: '+e.message,'error');
-  } finally {
+  }catch(e){
+    setConn('err','Connection failed: '+e.message);
+    showToast('Error: '+e.message,'error');
     hideLoading();
   }
 }
 
-// ════════════════════════════════════════════════════════════
-// SHAREPOINT AUTH HELPERS
-// ════════════════════════════════════════════════════════════
-async function getDigest(){
-  if(requestDigest && Date.now() < digestExpiry) return requestDigest;
-  const res = await spFetch('POST','/_api/contextinfo',null);
-  const json = await res.json();
-  requestDigest = json.FormDigestValue || json.d?.GetContextWebInformation?.FormDigestValue;
-  digestExpiry  = Date.now() + 25*60*1000; // 25 min
-  return requestDigest;
-}
-
-async function spFetch(method, path, body, extraHeaders={}){
-  const url = siteUrl + path;
-  const headers = {
-    'Accept':       'application/json;odata=nometadata',
-    'Content-Type': 'application/json;odata=nometadata',
-    ...extraHeaders
-  };
-  if(method !== 'GET' && method !== 'POST_NODIGEST'){
-    headers['X-RequestDigest'] = await getDigest();
-  }
-  const opts = { method: method==='POST_NODIGEST'?'POST':method, headers, credentials:'include' };
-  if(body) opts.body = JSON.stringify(body);
-  const res = await fetch(url, opts);
-  if(!res.ok){
-    const txt = await res.text().catch(()=>'');
-    throw new Error(`SharePoint error ${res.status}: ${txt.slice(0,200)}`);
-  }
-  return res;
-}
-
-// ════════════════════════════════════════════════════════════
-// USER & ADMIN
-// ════════════════════════════════════════════════════════════
-async function loadCurrentUser(){
-  const res  = await spFetch('GET','/_api/web/currentuser?$select=Title,LoginName,IsSiteAdmin');
-  const json = await res.json();
-  currentUser = json.Title || json.LoginName || 'User';
-  const initials = currentUser.split(' ').slice(0,2).map(w=>w[0]||'').join('').toUpperCase();
-  document.getElementById('userChip').style.display='flex';
-  document.getElementById('userName').textContent=currentUser;
-  document.getElementById('userInitials').textContent=initials;
-}
-
-async function checkAdminStatus(){
-  // Check both site admin flag and SharePoint group membership
+async function checkAdmin(){
   try{
-    const res  = await spFetch('GET','/_api/web/currentuser?$select=IsSiteAdmin');
-    const json = await res.json();
-    isAdmin = !!json.IsSiteAdmin;
-    // Also check if user is in an Owners group
-    if(!isAdmin){
-      const gRes  = await spFetch('GET','/_api/web/currentuser/groups?$select=LoginName,Title');
-      const gJson = await gRes.json();
-      const groups = gJson.value||[];
-      isAdmin = groups.some(g=>/owner|admin|full/i.test(g.Title));
-    }
-  } catch(e){ isAdmin=false; }
-
-  if(isAdmin){
-    document.getElementById('adminBadge').style.display='';
-    document.getElementById('clearAllBtn').style.display='';
-  }
-  // Cache to avoid re-checking every time
-  localStorage.setItem(ADMIN_KEY, isAdmin?'1':'0');
+    const groups=await graphFetch('GET','/me/memberOf?$select=displayName');
+    isAdmin=(groups.value||[]).some(g=>/owner|admin|full.?control/i.test(g.displayName||''));
+  }catch(e){ isAdmin=false; }
+  document.getElementById('adminBadge').style.display=isAdmin?'':'none';
+  document.getElementById('clearAllBtn').style.display=isAdmin?'':'none';
 }
 
-// ════════════════════════════════════════════════════════════
-// DATA — READ
-// ════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════
+// DATA
+// ══════════════════════════════════════════════════
 async function refreshData(){
-  showLoading('Loading records from SharePoint…');
+  showLoading('Loading records…');
   try{
-    const fields = 'Id,AgentName,Status,StatusDuration,CallNumber,CallDuration,CallChannel,EntryDate,AgentSID,Provider,Department,AddedBy';
-    const res  = await spFetch('GET',`/_api/web/lists/getbytitle('${LIST_NAME}')/items?$select=${fields}&$top=5000&$orderby=Id%20desc`);
-    const json = await res.json();
-    data = (json.value||[]).map(item=>({
-      id:             item.Id,
-      name:           item.AgentName||'',
-      status:         item.Status||'',
-      statusDuration: item.StatusDuration||'',
-      callNumber:     item.CallNumber||'',
-      callDuration:   item.CallDuration||'',
-      callChannel:    item.CallChannel||'',
-      date:           (item.EntryDate||'').slice(0,10),
-      agentSID:       item.AgentSID||'',
-      provider:       item.Provider||'',
-      department:     item.Department||'',
-      addedBy:        item.AddedBy||'',
-    }));
-    document.getElementById('infoTime').textContent = new Date().toLocaleTimeString();
-    document.getElementById('infoCount').textContent = data.length;
+    const res=await graphFetch('GET',
+      `/sites/${siteId}/lists/${listId}/items?expand=fields(select=AgentName,Status,StatusDuration,CallNumber,CallDuration,CallChannel,EntryDate,AgentSID,Provider,Department,AddedBy)&$top=5000&$orderby=createdDateTime desc`
+    );
+    data=(res.value||[]).map(item=>{
+      const f=item.fields||{};
+      return{id:item.id,name:f.AgentName||'',status:f.Status||'',statusDuration:f.StatusDuration||'',
+        callNumber:f.CallNumber||'',callDuration:f.CallDuration||'',callChannel:f.CallChannel||'',
+        date:(f.EntryDate||'').slice(0,10),agentSID:f.AgentSID||'',provider:f.Provider||'',
+        department:f.Department||'',addedBy:f.AddedBy||''};
+    });
+    document.getElementById('infoTime').textContent=new Date().toLocaleTimeString();
+    document.getElementById('infoCount').textContent=data.length;
     renderAll();
-  } catch(e){
-    showToast('Could not load data: '+e.message,'error');
-  } finally {
-    hideLoading();
-  }
+  }catch(e){ showToast('Load failed: '+e.message,'error'); }
+  finally{ hideLoading(); }
 }
 
-// ════════════════════════════════════════════════════════════
-// DATA — WRITE
-// ════════════════════════════════════════════════════════════
-async function saveRecord(record){
-  const body = {
-    AgentName:      record.name,
-    Status:         record.status,
-    StatusDuration: record.statusDuration,
-    CallNumber:     record.callNumber,
-    CallDuration:   record.callDuration,
-    CallChannel:    record.callChannel,
-    EntryDate:      record.date,
-    AgentSID:       record.agentSID,
-    Provider:       record.provider,
-    Department:     record.department,
-    AddedBy:        currentUser,
-    Title:          record.name, // SharePoint requires Title
-  };
-  const res  = await spFetch('POST',`/_api/web/lists/getbytitle('${LIST_NAME}')/items`,body);
-  const json = await res.json();
-  return json.Id || json.id;
+async function saveRecord(r){
+  return graphFetch('POST',`/sites/${siteId}/lists/${listId}/items`,{fields:{
+    Title:r.name,AgentName:r.name,Status:r.status,StatusDuration:r.statusDuration||'',
+    CallNumber:r.callNumber||'',CallDuration:r.callDuration||'',CallChannel:r.callChannel||'',
+    EntryDate:r.date||today(),AgentSID:r.agentSID||'',Provider:r.provider||'',
+    Department:r.department||'',AddedBy:account.name||account.username||'',
+  }});
 }
 
-async function deleteRecord(spId){
-  await spFetch('DELETE',`/_api/web/lists/getbytitle('${LIST_NAME}')/items(${spId})`,null,{
-    'IF-MATCH':'*','X-HTTP-Method':'DELETE'
-  });
-}
+async function deleteRecord(id){ await graphFetch('DELETE',`/sites/${siteId}/lists/${listId}/items/${id}`); }
 
-// ════════════════════════════════════════════════════════════
-// IMPORT FLOW
-// ════════════════════════════════════════════════════════════
 async function importParsed(){
   if(!parsedRows.length) return;
-  if(!siteUrl){ showToast('Configure SharePoint URL first.','error'); return; }
   closeModal('pasteModal');
-  showLoading(`Saving 0 / ${parsedRows.length} records to SharePoint…`);
-  let saved=0, failed=0;
+  showLoading(`Saving 0/${parsedRows.length}…`);
+  let saved=0,failed=0;
   for(const r of parsedRows){
-    try{
-      await saveRecord(r);
-      saved++;
-      document.getElementById('loadingText').textContent=`Saving ${saved} / ${parsedRows.length} records…`;
-    } catch(e){ failed++; }
+    try{ await saveRecord(r); saved++; document.getElementById('loadingText').textContent=`Saving ${saved}/${parsedRows.length}…`; }
+    catch(e){ failed++; }
   }
   parsedRows=[];
   await refreshData();
-  hideLoading();
-  const msg = failed>0
-    ? `✓ Saved ${saved} records. ${failed} failed — check permissions.`
-    : `✓ ${saved} records saved to SharePoint.`;
-  showToast(msg, failed>0?'error':'success');
+  showToast(failed>0?`✓ ${saved} saved, ${failed} failed.`:`✓ ${saved} records saved to SharePoint.`,failed>0?'error':'success');
 }
 
 async function addManualEntry(){
   const name=document.getElementById('m_name').value.trim();
   if(!name){showToast('Agent name is required.','error');return;}
-  if(!siteUrl){showToast('Configure SharePoint URL first.','error');return;}
-  const record={
-    name, status:document.getElementById('m_status').value,
-    statusDuration:document.getElementById('m_statusDur').value.trim(),
-    callNumber:document.getElementById('m_callNum').value.trim(),
-    callDuration:document.getElementById('m_callDur').value.trim(),
-    callChannel:document.getElementById('m_channel').value.trim(),
-    date:document.getElementById('m_date').value||today(),
-    agentSID:document.getElementById('m_sid').value.trim(),
-    provider:document.getElementById('m_provider').value.trim()||'The Functionary',
-    department:document.getElementById('m_dept').value.trim()||'Greyhound Telesales',
-  };
-  showLoading('Saving to SharePoint…');
+  showLoading('Saving…');
   try{
-    await saveRecord(record);
-    ['m_name','m_statusDur','m_callNum','m_callDur','m_channel','m_sid','m_provider','m_dept']
-      .forEach(id=>document.getElementById(id).value='');
+    await saveRecord({name,status:document.getElementById('m_status').value,
+      statusDuration:document.getElementById('m_statusDur').value.trim(),
+      callNumber:document.getElementById('m_callNum').value.trim(),
+      callDuration:document.getElementById('m_callDur').value.trim(),
+      callChannel:document.getElementById('m_channel').value.trim(),
+      date:document.getElementById('m_date').value||today(),
+      agentSID:document.getElementById('m_sid').value.trim(),
+      provider:document.getElementById('m_provider').value.trim()||'The Functionary',
+      department:document.getElementById('m_dept').value.trim()||'Greyhound Telesales'});
+    ['m_name','m_statusDur','m_callNum','m_callDur','m_channel','m_sid','m_provider','m_dept'].forEach(id=>document.getElementById(id).value='');
     closeModal('manualModal');
     await refreshData();
-    showToast('✓ Entry saved to SharePoint.','success');
-  } catch(e){
-    hideLoading();
-    showToast('Failed to save: '+e.message,'error');
-  }
+    showToast('✓ Entry saved.','success');
+  }catch(e){hideLoading();showToast('Failed: '+e.message,'error');}
 }
 
-async function deleteEntry(spId){
+async function deleteEntry(id){
   if(!isAdmin){showToast('Only admins can delete records.','error');return;}
-  if(!confirm('Delete this record from SharePoint?')) return;
+  if(!confirm('Delete this record?')) return;
   showLoading('Deleting…');
-  try{
-    await deleteRecord(spId);
-    await refreshData();
-    showToast('Record deleted.','success');
-  } catch(e){
-    hideLoading();
-    showToast('Delete failed: '+e.message,'error');
-  }
+  try{await deleteRecord(id);await refreshData();showToast('Deleted.','success');}
+  catch(e){hideLoading();showToast('Delete failed: '+e.message,'error');}
 }
 
 async function clearAllData(){
   if(!isAdmin){showToast('Only admins can clear all data.','error');return;}
-  if(!confirm('Delete ALL records from SharePoint? This cannot be undone.')) return;
-  showLoading('Deleting all records…');
+  if(!confirm('Delete ALL records? This cannot be undone.')) return;
+  showLoading('Clearing…');
   try{
-    let deleted=0;
-    for(const r of data){
-      await deleteRecord(r.id);
-      deleted++;
-      document.getElementById('loadingText').textContent=`Deleting ${deleted} / ${data.length}…`;
+    for(let i=0;i<data.length;i++){
+      await deleteRecord(data[i].id);
+      document.getElementById('loadingText').textContent=`Deleting ${i+1}/${data.length}…`;
     }
-    await refreshData();
-    showToast('All records deleted.','success');
-  } catch(e){
-    hideLoading();
-    showToast('Error during clear: '+e.message,'error');
-  }
+    await refreshData();showToast('All records deleted.','success');
+  }catch(e){hideLoading();showToast('Error: '+e.message,'error');}
 }
 
-// ════════════════════════════════════════════════════════════
-// SITE URL SETUP
-// ════════════════════════════════════════════════════════════
-function saveSiteUrl(){
-  const val = document.getElementById('siteUrlInput').value.trim().replace(/\/$/,'');
-  if(!val||!val.startsWith('http')){ showToast('Enter a valid SharePoint URL.','error'); return; }
-  siteUrl = val;
-  localStorage.setItem(LOCAL_KEY, siteUrl);
-  document.getElementById('siteUrlEdit').value=siteUrl;
-  document.getElementById('setupBanner').style.display='none';
-  connect();
-}
-function saveSiteUrlFromModal(){
-  const val = document.getElementById('siteUrlEdit').value.trim().replace(/\/$/,'');
-  if(!val||!val.startsWith('http')){ showToast('Enter a valid SharePoint URL.','error'); return; }
-  siteUrl=val;
-  localStorage.setItem(LOCAL_KEY,siteUrl);
-  document.getElementById('siteUrlInput').value=siteUrl;
-  closeModal('setupModal');
-  connect();
-}
-
-// ════════════════════════════════════════════════════════════
-// PARSER (same robust logic as before)
-// ════════════════════════════════════════════════════════════
-const STATUS_RE  = /busy calls?|ready|break|offline|wrap.?up|unavailable|on call/i;
-const STATDUR_RE = /^\d{1,3}:\d{2}$/;
-const CALLDUR_RE = /^\d+\s*(m|min|s|sec)$/i;
-const SIP_RE     = /^sip:/i;
-const SID_RE     = /^003[A-Za-z0-9]{10,}/;
-
+// ══════════════════════════════════════════════════
+// PARSER
+// ══════════════════════════════════════════════════
+const STATUS_RE=/busy calls?|ready|break|offline|wrap.?up|unavailable|on call/i;
+const STATDUR_RE=/^\d{1,3}:\d{2}$/;
+const CALLDUR_RE=/^\d+\s*(m|min|s|sec)$/i;
+const SIP_RE=/^sip:/i;
+const SID_RE=/^003[A-Za-z0-9]{10,}/;
 let parseTimer;
-function scheduleParse(){ clearTimeout(parseTimer); parseTimer=setTimeout(onPasteInput,80); }
+function scheduleParse(){clearTimeout(parseTimer);parseTimer=setTimeout(onPasteInput,80);}
 function onPasteInput(){
-  const ta=document.getElementById('pasteInput'), raw=ta.value;
+  const ta=document.getElementById('pasteInput'),raw=ta.value;
   document.getElementById('rawDebug').textContent=raw;
   ta.classList.toggle('has-content',raw.trim().length>0);
-  if(!raw.trim()){setStatus('','');hidePreview();document.getElementById('importBtn').disabled=true;return;}
+  if(!raw.trim()){setPSt('','');hidePreview();document.getElementById('importBtn').disabled=true;return;}
   parseAndPreview(raw);
 }
 function toggleDebug(){document.getElementById('rawDebug').style.display=document.getElementById('showDebug').checked?'block':'none';}
@@ -674,37 +526,30 @@ function clearPaste(){
   const ta=document.getElementById('pasteInput');ta.value='';ta.classList.remove('has-content');
   document.getElementById('rawDebug').textContent='';
   document.getElementById('importBtn').disabled=true;
-  setStatus('','');hidePreview();parsedRows=[];
+  setPSt('','');hidePreview();parsedRows=[];
 }
 function hidePreview(){document.getElementById('previewWrap').style.display='none';}
-
 function parseAndPreview(raw){
   parsedRows=[];
   const text=raw.replace(/\r\n/g,'\n').replace(/\r/g,'\n').replace(/[\u200B-\u200D\uFEFF]/g,'').replace(/\u00A0/g,' ');
   const lines=text.split('\n').map(l=>l.trim()).filter(l=>l);
   const tabLines=lines.filter(l=>l.includes('\t')&&!isHeader(l));
-  if(tabLines.length>0){
-    const rows=tabLines.map(parseTabRow).filter(Boolean);
-    if(rows.length>0){parsedRows=rows;finishParse();return;}
-  }
+  if(tabLines.length>0){const rows=tabLines.map(parseTabRow).filter(Boolean);if(rows.length>0){parsedRows=rows;finishParse();return;}}
   const dataLines=lines.filter(l=>!isHeader(l));
   let blocks=[],cur=[];
   for(const ln of dataLines){if(isAgentName(ln)&&cur.length>0){blocks.push(cur);cur=[ln];}else cur.push(ln);}
   if(cur.length>0)blocks.push(cur);
   const rows2=blocks.map(parseLineBlock).filter(Boolean);
   if(rows2.length>0){parsedRows=rows2;finishParse();return;}
-  setStatus('err','⚠️ Could not detect agent records. Enable "Show raw pasted text" to inspect what was copied.');
+  setPSt('err','⚠️ Could not detect records. Enable "Show raw pasted text" to inspect.');
   hidePreview();document.getElementById('importBtn').disabled=true;
 }
-function finishParse(){
-  setStatus('ok',`✓ Detected <strong>${parsedRows.length}</strong> record${parsedRows.length!==1?'s':''}. Preview below, then click <strong>Import to SharePoint</strong>.`);
-  renderPreview(parsedRows);document.getElementById('importBtn').disabled=false;
-}
+function finishParse(){setPSt('ok',`✓ Detected <strong>${parsedRows.length}</strong> record${parsedRows.length!==1?'s':''}. Review then click Import.`);renderPreview(parsedRows);document.getElementById('importBtn').disabled=false;}
 function parseTabRow(line){
   const cols=line.split('\t').map(c=>c.trim());
-  const agentParts=(cols[0]||'').split('\n').map(p=>p.trim()).filter(p=>p);
+  const ap=(cols[0]||'').split('\n').map(p=>p.trim()).filter(p=>p);
   let name='',status='',statusDuration='';
-  for(const p of agentParts){
+  for(const p of ap){
     if(!name&&isAgentName(p)){name=p;continue;}
     if(!status&&STATUS_RE.test(p)){const pi=p.indexOf('|');if(pi!==-1){status=p.slice(0,pi).trim();statusDuration=p.slice(pi+1).trim();}else status=p;continue;}
     if(!statusDuration&&STATDUR_RE.test(p)){statusDuration=p;continue;}
@@ -724,30 +569,21 @@ function parseTabRow(line){
     if(!agentSID&&SID_RE.test(c)){agentSID=c;continue;}
     if(!provider&&isProviderLike(c)){provider=c;continue;}
     if(!department&&isDeptLike(c)){department=c;continue;}
-    if(i===3&&!agentSID)agentSID=c;
-    else if(i===4&&!provider)provider=c;
-    else if(i===5&&!department)department=c;
+    if(i===3&&!agentSID)agentSID=c;else if(i===4&&!provider)provider=c;else if(i===5&&!department)department=c;
   }
-  return makeEntry(name,status,statusDuration,callNumber,callDuration,callChannel,agentSID,provider,department);
+  return{id:null,name,status:status||'Unknown',statusDuration,callNumber,callDuration,callChannel,date:today(),agentSID,provider:provider||'The Functionary',department:department||'Greyhound Telesales'};
 }
 function parseLineBlock(lines){
   let name='',status='',statusDuration='',callNumber='',callDuration='',callChannel='',agentSID='',provider='',department='';
   for(const ln of lines){
     for(const p of ln.split('|').map(p=>p.trim()).filter(p=>p)){
-      if(!name&&isAgentName(p)){name=p;continue;}
-      if(!status&&STATUS_RE.test(p)){status=p;continue;}
-      if(!statusDuration&&STATDUR_RE.test(p)){statusDuration=p;continue;}
-      if(!callNumber&&SIP_RE.test(p)){callNumber=p;continue;}
-      if(!callDuration&&CALLDUR_RE.test(p)){callDuration=p;continue;}
-      if(!agentSID&&SID_RE.test(p)){agentSID=p;continue;}
-      if(!provider&&isProviderLike(p)){provider=p;continue;}
-      if(!department&&isDeptLike(p)){department=p;continue;}
+      if(!name&&isAgentName(p)){name=p;continue;}if(!status&&STATUS_RE.test(p)){status=p;continue;}
+      if(!statusDuration&&STATDUR_RE.test(p)){statusDuration=p;continue;}if(!callNumber&&SIP_RE.test(p)){callNumber=p;continue;}
+      if(!callDuration&&CALLDUR_RE.test(p)){callDuration=p;continue;}if(!agentSID&&SID_RE.test(p)){agentSID=p;continue;}
+      if(!provider&&isProviderLike(p)){provider=p;continue;}if(!department&&isDeptLike(p)){department=p;continue;}
     }
   }
   if(!name)return null;
-  return makeEntry(name,status,statusDuration,callNumber,callDuration,callChannel,agentSID,provider,department);
-}
-function makeEntry(name,status,statusDuration,callNumber,callDuration,callChannel,agentSID,provider,department){
   return{id:null,name,status:status||'Unknown',statusDuration,callNumber,callDuration,callChannel,date:today(),agentSID,provider:provider||'The Functionary',department:department||'Greyhound Telesales'};
 }
 function isHeader(l){return /^(agent\b|calls\b|messages\b|service\s*provider|department|agent\s*sid)/i.test(l.trim());}
@@ -759,26 +595,23 @@ function isAgentName(s){
   return /[A-Za-zÀ-ÿ]/.test(s);
 }
 function isProviderLike(s){if(!s)return false;if(/^the\s+\w/i.test(s))return true;if(/functionary|teletech|telus|teleperformance|concentrix|ttec/i.test(s))return true;return false;}
-function isDeptLike(s){if(!s)return false;if(/telesales|customer\s*support|sales|support|helpdesk|greyhound/i.test(s))return true;return false;}
+function isDeptLike(s){return s?/telesales|customer\s*support|sales|support|helpdesk|greyhound/i.test(s):false;}
 function renderPreview(rows){
-  document.getElementById('previewTable').innerHTML=`<thead><tr><th>Name</th><th>Status</th><th>Duration</th><th>Call Number</th><th>Date</th><th>Dept</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${esc(r.name)}</td><td>${esc(r.status)}</td><td>${esc(r.statusDuration)||'—'}</td><td title="${esc(r.callNumber)}">${r.callNumber?esc(r.callNumber.slice(0,22))+'…':'—'}</td><td>${esc(r.date)}</td><td>${esc(r.department)}</td></tr>`).join('')}</tbody>`;
+  document.getElementById('previewTable').innerHTML=`<thead><tr><th>Name</th><th>Status</th><th>Duration</th><th>Call Number</th><th>Date</th><th>Dept</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${esc(r.name)}</td><td>${esc(r.status)}</td><td>${esc(r.statusDuration)||'—'}</td><td>${r.callNumber?esc(r.callNumber.slice(0,22))+'…':'—'}</td><td>${esc(r.date)}</td><td>${esc(r.department)}</td></tr>`).join('')}</tbody>`;
   document.getElementById('previewWrap').style.display='block';
 }
-function setStatus(type,html){const el=document.getElementById('parseStatus');if(!type){el.style.display='none';return;}el.className=`parse-status ${type}`;el.innerHTML=html;el.style.display='block';}
+function setPSt(type,html){const el=document.getElementById('parseStatus');if(!type){el.style.display='none';return;}el.className=`pstatus ${type}`;el.innerHTML=html;el.style.display='block';}
 
-// ════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════
 // RENDER
-// ════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════
 function renderAll(){
   const has=data.length>0;
   document.getElementById('importZone').style.display=has?'none':'';
-  ['statsBar','infoBar','filterBar','tableWrap'].forEach(id=>{
-    const el=document.getElementById(id);
-    if(el) el.style.display=has?(id==='infoBar'||id==='statsBar'?'flex':''):'none';
-  });
   document.getElementById('statsBar').style.display=has?'flex':'none';
   document.getElementById('infoBar').style.display=has?'flex':'none';
-  // Admin-only delete button
+  document.getElementById('filterBar').style.display=has?'':'none';
+  document.getElementById('tableWrap').style.display=has?'':'none';
   document.getElementById('clearAllBtn').style.display=isAdmin&&has?'':'none';
   updateStats();updateDeptFilter();renderTable(getFiltered());
 }
@@ -814,13 +647,10 @@ function renderTable(rows){
     const ini=r.name.split(' ').slice(0,2).map(w=>w[0]||'').join('').toUpperCase();
     const sc=/busy/i.test(r.status)?'busy':/^ready$/i.test(r.status)?'ready':/^break$/i.test(r.status)?'break':'offline';
     const hue=r.name.charCodeAt(0)%360;
-    const canDelete=isAdmin;
     return `<tr style="animation-delay:${i*.025}s">
-      <td><div class="agent-cell">
-        <div class="avatar" style="background:linear-gradient(135deg,hsl(${hue},60%,55%),hsl(${hue+40},60%,40%))">${ini}</div>
-        <div><div class="agent-name">${esc(r.name)}</div>${r.agentSID?`<div class="agent-id">${esc(r.agentSID.slice(0,18))}…</div>`:''}</div>
-      </div></td>
-      <td><span class="status-badge status-${sc}"><span class="status-dot"></span>${esc(r.status)}</span>
+      <td><div class="agent-cell"><div class="avatar" style="background:linear-gradient(135deg,hsl(${hue},60%,55%),hsl(${hue+40},60%,40%))">${ini}</div>
+        <div><div class="agent-name">${esc(r.name)}</div>${r.agentSID?`<div class="agent-id">${esc(r.agentSID.slice(0,18))}…</div>`:''}</div></div></td>
+      <td><span class="sbadge s-${sc}"><span class="sdot"></span>${esc(r.status)}</span>
         ${r.statusDuration?`<div class="mono-sm" style="margin-top:3px">${esc(r.statusDuration)}</div>`:''}</td>
       <td class="sip">${r.callNumber?esc(r.callNumber):'<span style="color:var(--border2)">—</span>'}</td>
       <td>${r.callDuration?`<span class="mono-sm" style="color:var(--text)">${esc(r.callDuration)}</span>`:'<span style="color:var(--border2)">—</span>'}
@@ -828,61 +658,35 @@ function renderTable(rows){
       <td class="mono-sm" style="color:var(--text)">${r.date||'—'}</td>
       <td><span class="dept-badge">${esc(r.department||'—')}</span></td>
       <td class="mono-sm">${esc(r.provider||'—')}</td>
-      <td>${canDelete?`<button class="icon-btn" onclick="deleteEntry(${r.id})" title="Delete">✕</button>`:'<span style="color:var(--border2);font-size:11px">—</span>'}</td>
+      <td class="mono-sm">${esc(r.addedBy||'—')}</td>
+      <td>${isAdmin?`<button class="icon-btn" onclick="deleteEntry('${r.id}')">✕</button>`:'<span style="color:var(--border2);font-size:11px">—</span>'}</td>
     </tr>`;
   }).join('');
 }
 
-// ════════════════════════════════════════════════════════════
-// EXPORT
-// ════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════
+// EXPORT / MODALS / UTILS
+// ══════════════════════════════════════════════════
 function exportCSV(){
-  const rows=getFiltered();
-  if(!rows.length){showToast('No data to export.','error');return;}
-  const h=['Name','Status','StatusDuration','CallNumber','CallDuration','CallChannel','Date','AgentSID','Provider','Department'];
-  const csv=[h.join(','),...rows.map(r=>[r.name,r.status,r.statusDuration,r.callNumber,r.callDuration,r.callChannel,r.date,r.agentSID,r.provider,r.department].map(v=>`"${(v||'').replace(/"/g,'""')}"`).join(','))].join('\n');
+  const rows=getFiltered();if(!rows.length){showToast('No data.','error');return;}
+  const h=['Name','Status','StatusDuration','CallNumber','CallDuration','CallChannel','Date','AgentSID','Provider','Department','AddedBy'];
+  const csv=[h.join(','),...rows.map(r=>[r.name,r.status,r.statusDuration,r.callNumber,r.callDuration,r.callChannel,r.date,r.agentSID,r.provider,r.department,r.addedBy].map(v=>`"${(v||'').replace(/"/g,'""')}"`).join(','))].join('\n');
   const a=document.createElement('a');a.href='data:text/csv,'+encodeURIComponent(csv);a.download=`teams-calls-${today()}.csv`;a.click();
   showToast('✓ CSV exported!','success');
 }
-
-// ════════════════════════════════════════════════════════════
-// MODALS
-// ════════════════════════════════════════════════════════════
-function openModal(id){
-  document.getElementById(id).classList.add('open');
-  if(id==='manualModal')document.getElementById('m_date').value=today();
-  if(id==='pasteModal')setTimeout(()=>document.getElementById('pasteInput').focus(),120);
-  if(id==='setupModal')document.getElementById('siteUrlEdit').value=siteUrl;
-}
+function openModal(id){document.getElementById(id).classList.add('open');if(id==='manualModal')document.getElementById('m_date').value=today();if(id==='pasteModal')setTimeout(()=>document.getElementById('pasteInput').focus(),120);}
 function closeModal(id){document.getElementById(id).classList.remove('open');if(id==='pasteModal')clearPaste();}
 document.querySelectorAll('.modal-backdrop').forEach(el=>el.addEventListener('click',e=>{if(e.target===el)closeModal(el.id);}));
-
-// ════════════════════════════════════════════════════════════
-// UI HELPERS
-// ════════════════════════════════════════════════════════════
-function setConnStatus(state,msg){
-  const dot=document.getElementById('connDot'),txt=document.getElementById('connText');
-  dot.className='conn-dot '+state;
-  txt.textContent=msg;
-  txt.style.color=state==='connected'?'var(--green)':state==='connecting'?'var(--yellow)':'var(--red)';
-}
-function showLoading(msg='Loading…'){
-  document.getElementById('loadingText').textContent=msg;
-  document.getElementById('loadingOverlay').style.display='flex';
-}
+function setConn(s,msg){const dot=document.getElementById('connDot'),txt=document.getElementById('connText');dot.className='conn-dot '+(s==='ok'?'ok':s==='busy'?'busy':'err');txt.textContent=msg;txt.style.color=s==='ok'?'var(--green)':s==='busy'?'var(--yellow)':'var(--red)';}
+function showLoading(msg){document.getElementById('loadingText').textContent=msg;document.getElementById('loadingOverlay').style.display='flex';}
 function hideLoading(){document.getElementById('loadingOverlay').style.display='none';}
-
+function show(id){document.getElementById(id).style.display=id==='loginScreen'?'flex':'block';}
+function hide(id){document.getElementById(id).style.display='none';}
 let toastTimer;
-function showToast(msg,type='success'){
-  const t=document.getElementById('toast');t.textContent=msg;t.className=type;t.style.display='block';
-  clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.style.display='none',3800);
-}
+function showToast(msg,type='success'){const t=document.getElementById('toast');t.textContent=msg;t.className=type;t.style.display='block';clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.style.display='none',4000);}
 function today(){return new Date().toISOString().slice(0,10);}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
-// ════════════════════════════════════════════════════════════
-// START
-// ════════════════════════════════════════════════════════════
 init();
 </script>
 </body>
