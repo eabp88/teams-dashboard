@@ -386,10 +386,8 @@ async function init(){
 
 async function signIn(){
   try{
-    showLoading('Opening Microsoft sign-in…');
-    var res = await msalApp.loginPopup({ scopes: SCOPES });
-    account = res.account;
-    await startApp();
+    showLoading('Redirecting to Microsoft sign-in…');
+    await msalApp.loginRedirect({ scopes: SCOPES });
   } catch(e){
     hideLoading();
     showToast('Sign in failed: ' + e.message, 'error');
@@ -397,11 +395,8 @@ async function signIn(){
 }
 
 function signOut(){
-  msalApp.logoutPopup({ account: account });
-  account = null;
   data = [];
-  hideEl('app');
-  showEl('loginScreen');
+  msalApp.logoutRedirect({ account: account });
 }
 
 async function getToken(){
@@ -409,8 +404,8 @@ async function getToken(){
     var res = await msalApp.acquireTokenSilent({ scopes: SCOPES, account: account });
     return res.accessToken;
   } catch(e){
-    var res = await msalApp.acquireTokenPopup({ scopes: SCOPES });
-    return res.accessToken;
+    await msalApp.acquireTokenRedirect({ scopes: SCOPES });
+    return null; // page will redirect
   }
 }
 
