@@ -5,7 +5,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Teams Call Dashboard</title>
-<script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js"></script>
+<script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js" crossorigin="anonymous"></script>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <style>
   :root{
@@ -322,17 +322,21 @@ const SCOPES    = ['https://graph.microsoft.com/Sites.ReadWrite.All'];
 // ══════════════════════════════════════════════════
 // MSAL
 // ══════════════════════════════════════════════════
-const msalApp = new msal.PublicClientApplication({
-  auth:{
-    clientId: CLIENT_ID,
-    authority:`https://login.microsoftonline.com/${TENANT_ID}`,
-    redirectUri: window.location.origin + window.location.pathname,
-  },
-  cache:{ cacheLocation:'localStorage', storeAuthStateInCookie:true }
-});
+var msalApp = null;
 
 var account=null, siteId=null, listId=null, data=[], isAdmin=false;
 var sortKey='', sortDir=1, parsedRows=[], toastTimer=null;
+
+function initMsal(){
+  msalApp = new msal.PublicClientApplication({
+    auth:{
+      clientId: CLIENT_ID,
+      authority:`https://login.microsoftonline.com/${TENANT_ID}`,
+      redirectUri: window.location.origin + window.location.pathname,
+    },
+    cache:{ cacheLocation:'localStorage', storeAuthStateInCookie:true }
+  });
+}
 
 // ══════════════════════════════════════════════════
 // AUTH
@@ -687,7 +691,10 @@ function showToast(msg,type='success'){const t=document.getElementById('toast');
 function today(){return new Date().toISOString().slice(0,10);}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
-init();
+window.onload = function(){
+  initMsal();
+  init();
+};
 </script>
 </body>
 </html>
