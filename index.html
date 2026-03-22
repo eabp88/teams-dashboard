@@ -336,7 +336,7 @@ function initMsal(){
     auth:{
       clientId: CLIENT_ID,
       authority:`https://login.microsoftonline.com/${TENANT_ID}`,
-      redirectUri: window.location.origin + window.location.pathname,
+      redirectUri: 'https://eabp88.github.io/teams-dashboard/',
     },
     cache:{ cacheLocation:'localStorage', storeAuthStateInCookie:true }
   });
