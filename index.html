@@ -5,7 +5,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Teams Call Dashboard</title>
-<script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@azure/msal-browser@2.38.3/lib/msal-browser.min.js" crossorigin="anonymous"></script>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <style>
   :root{
@@ -328,7 +328,7 @@ var account=null, siteId=null, listId=null, data=[], isAdmin=false;
 var sortKey='', sortDir=1, parsedRows=[], toastTimer=null;
 
 function initMsal(){
-  msalApp = new msal.PublicClientApplication({
+  msalApp = new msalBrowser.PublicClientApplication({
     auth:{
       clientId: CLIENT_ID,
       authority:`https://login.microsoftonline.com/${TENANT_ID}`,
