@@ -326,8 +326,10 @@ var CLIENT_ID   = '198a4127-4ad2-4d32-a0cb-beb6d48b3bb0';
 var TENANT_ID   = '88d97709-f0ea-4a21-86f3-f603d653e7c9';
 var FOLDER_NAME = 'Twillio Calls Repository';
 var FILE_NAME   = 'teamcalldata.json';
-// Uses Files.ReadWrite scope — no admin consent required
-var SCOPES      = ['Files.ReadWrite', 'User.Read'];
+var SP_HOST     = 'thefunctionary.sharepoint.com';
+var SITE_PATH   = '/sites/flix.ops';
+// Files.ReadWrite.All allows access to SharePoint folders — no admin consent needed
+var SCOPES      = ['Files.ReadWrite.All', 'User.Read'];
 
 // ══════════════════════════════════════════════════
 // STATE
@@ -472,12 +474,13 @@ async function checkIfAdmin(){
 // FILE STORAGE — read/write JSON to OneDrive folder
 // Path: /drive/root:/{FOLDER_NAME}/{FILE_NAME}
 // ══════════════════════════════════════════════════
-var FILE_PATH = '/me/drive/root:/' + encodeURIComponent(FOLDER_NAME) + '/' + FILE_NAME;
+// Path to file inside SharePoint site drive
+var FILE_PATH = '/sites/' + SP_HOST + ':' + SITE_PATH + ':/drive/root:/' + encodeURIComponent(FOLDER_NAME) + '/' + FILE_NAME;
 
 async function readFile(){
   try{
     // Get download URL
-    var meta = await graphFetch('GET', FILE_PATH);
+    var meta = await graphFetch('GET', '/sites/' + SP_HOST + ':' + SITE_PATH + ':/drive/root:/' + encodeURIComponent(FOLDER_NAME) + '/' + FILE_NAME);
     var token = await getToken();
     var res = await fetch(meta['@microsoft.graph.downloadUrl'] || meta.downloadUrl, {
       headers:{ 'Authorization': 'Bearer ' + token }
@@ -496,7 +499,7 @@ async function writeFile(records){
   var content = JSON.stringify(records, null, 2);
   var token = await getToken();
   var res = await fetch(
-    'https://graph.microsoft.com/v1.0' + FILE_PATH + ':/content',
+    'https://graph.microsoft.com/v1.0/sites/' + SP_HOST + ':' + SITE_PATH + ':/drive/root:/' + encodeURIComponent(FOLDER_NAME) + '/' + FILE_NAME + ':/content',
     {
       method: 'PUT',
       headers:{
@@ -546,10 +549,11 @@ async function importParsed(){
     });
     data = data.concat(parsedRows);
     await saveData();
+    var savedCount = parsedRows.length;
     parsedRows = [];
     document.getElementById('infoCount').textContent = data.length;
     renderAll();
-    showToast('✓ ' + parsedRows.length + ' records saved to OneDrive.', 'success');
+    showToast('✓ ' + savedCount + ' records saved to OneDrive.', 'success');
   } catch(e){
     showToast('Save failed: ' + e.message, 'error');
   } finally {
