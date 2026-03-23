@@ -16,18 +16,16 @@
   *{box-sizing:border-box;margin:0;padding:0}
   body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;overflow-x:hidden}
 
-  /* LOGIN */
   #loginScreen{display:none;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:32px}
-  .login-card{background:var(--surface);border:1px solid var(--border2);border-radius:20px;padding:48px 40px;text-align:center;max-width:420px;width:100%}
+  .login-card{background:var(--surface);border:1px solid var(--border2);border-radius:20px;padding:48px 40px;text-align:center;max-width:440px;width:100%}
   .login-logo{width:56px;height:56px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 20px}
   .login-card h1{font-size:22px;font-weight:700;margin-bottom:8px}
   .login-card p{color:var(--muted);font-size:14px;margin-bottom:32px;line-height:1.6}
   .ms-btn{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;padding:14px 20px;background:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;color:#1a1a1a;transition:all .15s}
   .ms-btn:hover{background:#f0f0f0;transform:translateY(-1px)}
   .ms-btn svg{width:20px;height:20px;flex-shrink:0}
-  .login-note{margin-top:16px;font-size:12px;color:var(--muted);line-height:1.6}
+  .login-note{margin-top:16px;font-size:12px;color:var(--muted);line-height:1.6;background:var(--surface2);border-radius:8px;padding:12px}
 
-  /* CONN BAR */
   #connBar{display:flex;align-items:center;gap:10px;padding:7px 26px;font-size:12px;border-bottom:1px solid var(--border);background:var(--surface);flex-wrap:wrap}
   .conn-dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex-shrink:0}
   .conn-dot.ok{background:var(--green);box-shadow:0 0 6px var(--green)}
@@ -35,7 +33,6 @@
   .conn-dot.err{background:var(--red)}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 
-  /* HEADER */
   header{display:flex;align-items:center;justify-content:space-between;padding:13px 26px;border-bottom:1px solid var(--border);background:var(--surface);position:sticky;top:0;z-index:100;flex-wrap:wrap;gap:10px}
   .logo{display:flex;align-items:center;gap:10px}
   .logo-icon{width:32px;height:32px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px}
@@ -162,7 +159,7 @@
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 23 23"><path fill="#f3f3f3" d="M0 0h23v23H0z"/><path fill="#f35325" d="M1 1h10v10H1z"/><path fill="#81bc06" d="M12 1h10v10H12z"/><path fill="#05a6f0" d="M1 12h10v10H1z"/><path fill="#ffba08" d="M12 12h10v10H12z"/></svg>
       Sign in with Microsoft
     </button>
-    <p class="login-note">🔒 Data is stored exclusively in your company's SharePoint.<br>No data is stored on GitHub or any third party.</p>
+    <p class="login-note">🔒 Data is stored in the company's shared OneDrive folder.<br>No data is stored on GitHub or any third party.</p>
   </div>
 </div>
 
@@ -196,7 +193,7 @@
   <main>
     <div id="importZone">
       <h2>📋 No records yet</h2>
-      <p>Paste data from Twilio or add entries manually.<br>All records are saved to your shared <strong>Twillio Calls Repository</strong> folder and instantly visible to all colleagues.</p>
+      <p>Paste data from Twilio or add entries manually.<br>All records are saved to the shared <strong>Twillio Calls Repository</strong> folder and instantly visible to all colleagues.</p>
       <div class="import-opts">
         <button class="btn btn-primary" onclick="openModal('pasteModal')">📋 Paste from Twilio</button>
         <button class="btn btn-ghost" onclick="openModal('manualModal')">✏️ Add Manually</button>
@@ -322,30 +319,30 @@
 // ══════════════════════════════════════════════════
 // CONFIG
 // ══════════════════════════════════════════════════
-var CLIENT_ID   = '198a4127-4ad2-4d32-a0cb-beb6d48b3bb0';
-var TENANT_ID   = '88d97709-f0ea-4a21-86f3-f603d653e7c9';
-var FOLDER_NAME = 'Twillio Calls Repository';
-var FILE_NAME   = 'teamcalldata.json';
-var SP_HOST     = 'thefunctionary.sharepoint.com';
-var SITE_PATH   = '/sites/flix.ops';
-// Files.ReadWrite.All allows access to SharePoint folders — no admin consent needed
-var SCOPES      = ['Files.ReadWrite.All', 'User.Read'];
+var CLIENT_ID    = '198a4127-4ad2-4d32-a0cb-beb6d48b3bb0';
+var TENANT_ID    = '88d97709-f0ea-4a21-86f3-f603d653e7c9';
+// Owner's OneDrive user ID — all data stored here
+var OWNER_ID     = '423b73fc-2cdd-48da-a657-dba86e064f62';
+var FOLDER_NAME  = 'Twillio Calls Repository';
+var FILE_NAME    = 'teamcalldata.json';
+// Files.ReadWrite does NOT require admin consent
+var SCOPES       = ['Files.ReadWrite', 'User.Read'];
 
 // ══════════════════════════════════════════════════
 // STATE
 // ══════════════════════════════════════════════════
-var msalApp     = null;
-var account     = null;
-var data        = [];
-var isAdmin     = false;
-var sortKey     = '';
-var sortDir     = 1;
-var parsedRows  = [];
-var toastTimer  = null;
-var parseTimer  = null;
+var msalApp    = null;
+var account    = null;
+var data       = [];
+var isAdmin    = false;
+var sortKey    = '';
+var sortDir    = 1;
+var parsedRows = [];
+var toastTimer = null;
+var parseTimer = null;
 
 // ══════════════════════════════════════════════════
-// MSAL INIT
+// MSAL
 // ══════════════════════════════════════════════════
 function initMsal(){
   if(typeof msal === 'undefined'){
@@ -354,8 +351,8 @@ function initMsal(){
   }
   msalApp = new msal.PublicClientApplication({
     auth:{
-      clientId: CLIENT_ID,
-      authority: 'https://login.microsoftonline.com/' + TENANT_ID,
+      clientId:    CLIENT_ID,
+      authority:   'https://login.microsoftonline.com/' + TENANT_ID,
       redirectUri: 'https://eabp88.github.io/teams-dashboard/',
     },
     cache:{ cacheLocation:'localStorage', storeAuthStateInCookie:true }
@@ -407,18 +404,19 @@ async function getToken(){
     return res.accessToken;
   } catch(e){
     await msalApp.acquireTokenRedirect({ scopes: SCOPES });
-    return null; // page will redirect
+    return null;
   }
 }
 
 async function graphFetch(method, path, body){
   var token = await getToken();
+  if(!token) return null;
   var opts = {
     method: method,
     headers:{
       'Authorization': 'Bearer ' + token,
-      'Content-Type': 'application/json',
-      'Accept': 'application/json'
+      'Content-Type':  'application/json',
+      'Accept':        'application/json'
     }
   };
   if(body !== undefined && body !== null) opts.body = JSON.stringify(body);
@@ -432,22 +430,22 @@ async function graphFetch(method, path, body){
 }
 
 // ══════════════════════════════════════════════════
-// START APP
+// START
 // ══════════════════════════════════════════════════
 async function startApp(){
   hideEl('loginScreen');
   showEl('app');
   showLoading('Connecting to OneDrive…');
   try{
-    var me = await graphFetch('GET', '/me?$select=displayName,userPrincipalName');
+    var me   = await graphFetch('GET', '/me?$select=displayName,userPrincipalName,id');
     var name = me.displayName || me.userPrincipalName || 'User';
     var ini  = name.split(' ').slice(0,2).map(function(w){ return w[0]||''; }).join('').toUpperCase();
     document.getElementById('userName').textContent = name;
     document.getElementById('userAv').textContent   = ini;
 
-    // Check if user is owner of the folder (admin)
-    isAdmin = await checkIfAdmin();
-    document.getElementById('adminBadge').style.display = isAdmin ? '' : 'none';
+    // User is admin if they are the owner of the OneDrive
+    isAdmin = (me.id === OWNER_ID);
+    document.getElementById('adminBadge').style.display  = isAdmin ? '' : 'none';
     document.getElementById('clearAllBtn').style.display = isAdmin ? '' : 'none';
 
     setConn('ok', 'Connected · Twillio Calls Repository · OneDrive');
@@ -459,52 +457,45 @@ async function startApp(){
   }
 }
 
-async function checkIfAdmin(){
-  // Anyone who can access the file is a contributor
-  // Admin = people in the Owners group of the SharePoint site
-  try{
-    var groups = await graphFetch('GET', '/me/memberOf?$select=displayName');
-    return (groups.value||[]).some(function(g){
-      return /owner|admin|full.?control/i.test(g.displayName||'');
-    });
-  } catch(e){ return false; }
-}
-
 // ══════════════════════════════════════════════════
-// FILE STORAGE — read/write JSON to OneDrive folder
-// Path: /drive/root:/{FOLDER_NAME}/{FILE_NAME}
+// FILE STORAGE
+// Read/write a JSON file in the OWNER's OneDrive
+// using /users/{OWNER_ID}/drive — accessible to
+// anyone who has been shared the file/folder
 // ══════════════════════════════════════════════════
-// Path to file inside SharePoint site drive
-var FILE_PATH = '/sites/' + SP_HOST + ':' + SITE_PATH + ':/drive/root:/' + encodeURIComponent(FOLDER_NAME) + '/' + FILE_NAME;
+var BASE_PATH = '/users/' + OWNER_ID + '/drive/root:/' +
+  encodeURIComponent(FOLDER_NAME) + '/' + FILE_NAME;
 
 async function readFile(){
   try{
-    // Get download URL
-    var meta = await graphFetch('GET', '/sites/' + SP_HOST + ':' + SITE_PATH + ':/drive/root:/' + encodeURIComponent(FOLDER_NAME) + '/' + FILE_NAME);
     var token = await getToken();
-    var res = await fetch(meta['@microsoft.graph.downloadUrl'] || meta.downloadUrl, {
-      headers:{ 'Authorization': 'Bearer ' + token }
-    });
+    if(!token) return [];
+    // Get file metadata (includes download URL)
+    var meta = await graphFetch('GET', BASE_PATH);
+    // Download actual content
+    var dlUrl = meta['@microsoft.graph.downloadUrl'];
+    var res   = await fetch(dlUrl);
     if(!res.ok) return [];
-    var json = await res.json();
+    var json  = await res.json();
     return Array.isArray(json) ? json : [];
   } catch(e){
-    // File doesn't exist yet — return empty array
+    // 404 = file doesn't exist yet, start empty
     if(e.message.indexOf('404') !== -1) return [];
     throw e;
   }
 }
 
 async function writeFile(records){
-  var content = JSON.stringify(records, null, 2);
   var token = await getToken();
+  if(!token) return;
+  var content = JSON.stringify(records, null, 2);
   var res = await fetch(
-    'https://graph.microsoft.com/v1.0/sites/' + SP_HOST + ':' + SITE_PATH + ':/drive/root:/' + encodeURIComponent(FOLDER_NAME) + '/' + FILE_NAME + ':/content',
+    'https://graph.microsoft.com/v1.0' + BASE_PATH + ':/content',
     {
       method: 'PUT',
       headers:{
         'Authorization': 'Bearer ' + token,
-        'Content-Type': 'application/json'
+        'Content-Type':  'application/json'
       },
       body: content
     }
@@ -517,7 +508,7 @@ async function writeFile(records){
 }
 
 // ══════════════════════════════════════════════════
-// DATA OPERATIONS
+// DATA
 // ══════════════════════════════════════════════════
 async function refreshData(){
   showLoading('Loading records from OneDrive…');
@@ -539,21 +530,20 @@ async function saveData(){
 
 async function importParsed(){
   if(!parsedRows.length) return;
+  var count = parsedRows.length;
   closeModal('pasteModal');
-  showLoading('Saving ' + parsedRows.length + ' records to OneDrive…');
+  showLoading('Saving ' + count + ' records to OneDrive…');
   try{
-    // Add addedBy and id to each record
     parsedRows.forEach(function(r){
       r.id      = Date.now() + Math.random();
       r.addedBy = account.name || account.username || '';
     });
     data = data.concat(parsedRows);
-    await saveData();
-    var savedCount = parsedRows.length;
     parsedRows = [];
+    await saveData();
     document.getElementById('infoCount').textContent = data.length;
     renderAll();
-    showToast('✓ ' + savedCount + ' records saved to OneDrive.', 'success');
+    showToast('✓ ' + count + ' records saved to OneDrive.', 'success');
   } catch(e){
     showToast('Save failed: ' + e.message, 'error');
   } finally {
@@ -566,7 +556,7 @@ async function addManualEntry(){
   if(!name){ showToast('Agent name is required.', 'error'); return; }
   showLoading('Saving to OneDrive…');
   try{
-    var record = {
+    data.push({
       id:             Date.now() + Math.random(),
       name:           name,
       status:         document.getElementById('m_status').value,
@@ -579,8 +569,7 @@ async function addManualEntry(){
       provider:       document.getElementById('m_provider').value.trim() || 'The Functionary',
       department:     document.getElementById('m_dept').value.trim() || 'Greyhound Telesales',
       addedBy:        account.name || account.username || '',
-    };
-    data.push(record);
+    });
     await saveData();
     ['m_name','m_statusDur','m_callNum','m_callDur','m_channel','m_sid','m_provider','m_dept']
       .forEach(function(id){ document.getElementById(id).value = ''; });
@@ -659,7 +648,6 @@ function clearPaste(){
   document.getElementById('importBtn').disabled = true;
   setPSt('',''); hidePreview(); parsedRows = [];
 }
-
 function hidePreview(){ document.getElementById('previewWrap').style.display = 'none'; }
 
 function parseAndPreview(raw){
@@ -667,7 +655,7 @@ function parseAndPreview(raw){
   var text = raw.replace(/\r\n/g,'\n').replace(/\r/g,'\n')
                .replace(/[\u200B-\u200D\uFEFF]/g,'').replace(/\u00A0/g,' ');
   var lines = text.split('\n').map(function(l){ return l.trim(); }).filter(function(l){ return l; });
-  var tabLines = lines.filter(function(l){ return l.includes('\t') && !isHeader(l); });
+  var tabLines = lines.filter(function(l){ return l.indexOf('\t') !== -1 && !isHeader(l); });
   if(tabLines.length > 0){
     var rows = tabLines.map(parseTabRow).filter(Boolean);
     if(rows.length > 0){ parsedRows = rows; finishParse(); return; }
@@ -693,35 +681,36 @@ function finishParse(){
 
 function parseTabRow(line){
   var cols = line.split('\t').map(function(c){ return c.trim(); });
-  var ap = (cols[0]||'').split('\n').map(function(p){ return p.trim(); }).filter(Boolean);
-  var name='', status='', statusDuration='';
+  var ap   = (cols[0]||'').split('\n').map(function(p){ return p.trim(); }).filter(Boolean);
+  var name = '', status = '', statusDuration = '';
   ap.forEach(function(p){
-    if(!name && isAgentName(p)){ name=p; return; }
+    if(!name && isAgentName(p)){ name = p; return; }
     if(!status && STATUS_RE.test(p)){
-      var pi=p.indexOf('|');
-      if(pi!==-1){ status=p.slice(0,pi).trim(); statusDuration=p.slice(pi+1).trim(); }
-      else status=p; return;
+      var pi = p.indexOf('|');
+      if(pi !== -1){ status = p.slice(0,pi).trim(); statusDuration = p.slice(pi+1).trim(); }
+      else status = p;
+      return;
     }
-    if(!statusDuration && STATDUR_RE.test(p)){ statusDuration=p; }
+    if(!statusDuration && STATDUR_RE.test(p)){ statusDuration = p; }
   });
   if(!name) return null;
-  var callNumber='', callDuration='', callChannel='';
+  var callNumber = '', callDuration = '', callChannel = '';
   (cols[1]||'').split('\n').map(function(x){ return x.trim(); }).filter(Boolean).forEach(function(p){
-    if(!callNumber && SIP_RE.test(p)){ callNumber=p; return; }
-    if(!callDuration && CALLDUR_RE.test(p)){ callDuration=p; return; }
-    var pi=p.indexOf('|');
-    if(pi!==-1 && !callDuration){ callDuration=p.slice(0,pi).trim(); callChannel=p.slice(pi+1).trim(); return; }
-    if(!callChannel && p) callChannel=p;
+    if(!callNumber && SIP_RE.test(p)){ callNumber = p; return; }
+    if(!callDuration && CALLDUR_RE.test(p)){ callDuration = p; return; }
+    var pi = p.indexOf('|');
+    if(pi !== -1 && !callDuration){ callDuration = p.slice(0,pi).trim(); callChannel = p.slice(pi+1).trim(); return; }
+    if(!callChannel && p) callChannel = p;
   });
-  var agentSID='', provider='', department='';
-  for(var i=2; i<cols.length; i++){
-    var c=cols[i].trim(); if(!c) continue;
-    if(!agentSID && SID_RE.test(c)){ agentSID=c; continue; }
-    if(!provider && isProviderLike(c)){ provider=c; continue; }
-    if(!department && isDeptLike(c)){ department=c; continue; }
-    if(i===3 && !agentSID) agentSID=c;
-    else if(i===4 && !provider) provider=c;
-    else if(i===5 && !department) department=c;
+  var agentSID = '', provider = '', department = '';
+  for(var i = 2; i < cols.length; i++){
+    var c = cols[i].trim(); if(!c) continue;
+    if(!agentSID && SID_RE.test(c)){ agentSID = c; continue; }
+    if(!provider && isProviderLike(c)){ provider = c; continue; }
+    if(!department && isDeptLike(c)){ department = c; continue; }
+    if(i === 3 && !agentSID) agentSID = c;
+    else if(i === 4 && !provider) provider = c;
+    else if(i === 5 && !department) department = c;
   }
   return makeEntry(name,status,statusDuration,callNumber,callDuration,callChannel,agentSID,provider,department);
 }
@@ -730,14 +719,14 @@ function parseLineBlock(lines){
   var name='',status='',statusDuration='',callNumber='',callDuration='',callChannel='',agentSID='',provider='',department='';
   lines.forEach(function(ln){
     ln.split('|').map(function(p){ return p.trim(); }).filter(Boolean).forEach(function(p){
-      if(!name && isAgentName(p)){ name=p; return; }
-      if(!status && STATUS_RE.test(p)){ status=p; return; }
-      if(!statusDuration && STATDUR_RE.test(p)){ statusDuration=p; return; }
-      if(!callNumber && SIP_RE.test(p)){ callNumber=p; return; }
-      if(!callDuration && CALLDUR_RE.test(p)){ callDuration=p; return; }
-      if(!agentSID && SID_RE.test(p)){ agentSID=p; return; }
-      if(!provider && isProviderLike(p)){ provider=p; return; }
-      if(!department && isDeptLike(p)){ department=p; return; }
+      if(!name && isAgentName(p)){ name = p; return; }
+      if(!status && STATUS_RE.test(p)){ status = p; return; }
+      if(!statusDuration && STATDUR_RE.test(p)){ statusDuration = p; return; }
+      if(!callNumber && SIP_RE.test(p)){ callNumber = p; return; }
+      if(!callDuration && CALLDUR_RE.test(p)){ callDuration = p; return; }
+      if(!agentSID && SID_RE.test(p)){ agentSID = p; return; }
+      if(!provider && isProviderLike(p)){ provider = p; return; }
+      if(!department && isDeptLike(p)){ department = p; return; }
     });
   });
   if(!name) return null;
@@ -769,15 +758,15 @@ function isDeptLike(s){ return s ? /telesales|customer\s*support|sales|support|h
 function renderPreview(rows){
   document.getElementById('previewTable').innerHTML =
     '<thead><tr><th>Name</th><th>Status</th><th>Duration</th><th>Call Number</th><th>Date</th><th>Dept</th></tr></thead><tbody>' +
-    rows.map(function(r){ return '<tr><td>'+esc(r.name)+'</td><td>'+esc(r.status)+'</td><td>'+(esc(r.statusDuration)||'—')+'</td><td>'+(r.callNumber?esc(r.callNumber.slice(0,22))+'…':'—')+'</td><td>'+esc(r.date)+'</td><td>'+esc(r.department)+'</td></tr>'; }).join('') +
-    '</tbody>';
+    rows.map(function(r){
+      return '<tr><td>'+esc(r.name)+'</td><td>'+esc(r.status)+'</td><td>'+(esc(r.statusDuration)||'—')+'</td><td>'+(r.callNumber?esc(r.callNumber.slice(0,22))+'…':'—')+'</td><td>'+esc(r.date)+'</td><td>'+esc(r.department)+'</td></tr>';
+    }).join('') + '</tbody>';
   document.getElementById('previewWrap').style.display = 'block';
 }
-
 function setPSt(type,html){
-  var el=document.getElementById('parseStatus');
-  if(!type){ el.style.display='none'; return; }
-  el.className='pstatus '+type; el.innerHTML=html; el.style.display='block';
+  var el = document.getElementById('parseStatus');
+  if(!type){ el.style.display = 'none'; return; }
+  el.className = 'pstatus ' + type; el.innerHTML = html; el.style.display = 'block';
 }
 
 // ══════════════════════════════════════════════════
@@ -802,14 +791,17 @@ function updateStats(){
 }
 
 function updateDeptFilter(){
-  var sel = document.getElementById('deptFilter'), cur = sel.value;
-  var depts = [...new Set(data.map(function(r){ return r.department; }).filter(Boolean))].sort();
+  var sel   = document.getElementById('deptFilter');
+  var cur   = sel.value;
+  var depts = [];
+  data.forEach(function(r){ if(r.department && depts.indexOf(r.department) === -1) depts.push(r.department); });
+  depts.sort();
   sel.innerHTML = '<option value="">All Departments</option>' +
     depts.map(function(d){ return '<option value="'+esc(d)+'">'+esc(d)+'</option>'; }).join('');
   sel.value = cur;
 }
 
-function sortTable(key){ sortDir = sortKey===key ? sortDir*-1 : 1; sortKey=key; renderTable(getFiltered()); }
+function sortTable(key){ sortDir = sortKey === key ? sortDir * -1 : 1; sortKey = key; renderTable(getFiltered()); }
 function filterTable(){ renderTable(getFiltered()); }
 
 function getFiltered(){
@@ -818,33 +810,33 @@ function getFiltered(){
   var d  = document.getElementById('deptFilter').value;
   var dt = document.getElementById('dateFilter').value;
   return data.filter(function(r){
-    return (!s  || r.name.toLowerCase().includes(s)) &&
-           (!st || r.status.toLowerCase().includes(st)) &&
+    return (!s  || r.name.toLowerCase().indexOf(s) !== -1) &&
+           (!st || r.status.toLowerCase().indexOf(st) !== -1) &&
            (!d  || r.department === d) &&
            (!dt || r.date === dt);
   });
 }
 
 function clearFilters(){
-  ['searchInput','statusFilter','deptFilter','dateFilter'].forEach(function(id){ document.getElementById(id).value=''; });
+  ['searchInput','statusFilter','deptFilter','dateFilter'].forEach(function(id){ document.getElementById(id).value = ''; });
   filterTable();
 }
 
 function renderTable(rows){
   if(sortKey) rows = rows.slice().sort(function(a,b){
-    var av=(a[sortKey]||'').toLowerCase(), bv=(b[sortKey]||'').toLowerCase();
-    return av<bv?-sortDir:av>bv?sortDir:0;
+    var av = (a[sortKey]||'').toLowerCase(), bv = (b[sortKey]||'').toLowerCase();
+    return av < bv ? -sortDir : av > bv ? sortDir : 0;
   });
   var tbody = document.getElementById('tableBody');
-  document.getElementById('rowCount').textContent = rows.length + ' record' + (rows.length!==1?'s':'');
+  document.getElementById('rowCount').textContent = rows.length + ' record' + (rows.length !== 1 ? 's' : '');
   document.getElementById('noResults').style.display = rows.length ? 'none' : '';
-  if(!rows.length){ tbody.innerHTML=''; return; }
-  tbody.innerHTML = rows.map(function(r,i){
+  if(!rows.length){ tbody.innerHTML = ''; return; }
+  tbody.innerHTML = rows.map(function(r, i){
     var ini = r.name.split(' ').slice(0,2).map(function(w){ return w[0]||''; }).join('').toUpperCase();
-    var sc  = /busy/i.test(r.status)?'busy':/^ready$/i.test(r.status)?'ready':/^break$/i.test(r.status)?'break':'offline';
+    var sc  = /busy/i.test(r.status) ? 'busy' : /^ready$/i.test(r.status) ? 'ready' : /^break$/i.test(r.status) ? 'break' : 'offline';
     var hue = r.name.charCodeAt(0) % 360;
     var rid = r.id;
-    return '<tr style="animation-delay:'+i*.025+'s">' +
+    return '<tr style="animation-delay:' + i * .025 + 's">' +
       '<td><div class="agent-cell"><div class="avatar" style="background:linear-gradient(135deg,hsl('+hue+',60%,55%),hsl('+(hue+40)+',60%,40%))">'+ini+'</div>' +
       '<div><div class="agent-name">'+esc(r.name)+'</div>'+(r.agentSID?'<div class="agent-id">'+esc(r.agentSID.slice(0,18))+'…</div>':'')+'</div></div></td>' +
       '<td><span class="sbadge s-'+sc+'"><span class="sdot"></span>'+esc(r.status)+'</span>'+(r.statusDuration?'<div class="mono-sm" style="margin-top:3px">'+esc(r.statusDuration)+'</div>':'')+'</td>' +
@@ -865,7 +857,7 @@ function renderTable(rows){
 function exportCSV(){
   var rows = getFiltered();
   if(!rows.length){ showToast('No data to export.','error'); return; }
-  var h = ['Name','Status','StatusDuration','CallNumber','CallDuration','CallChannel','Date','AgentSID','Provider','Department','AddedBy'];
+  var h   = ['Name','Status','StatusDuration','CallNumber','CallDuration','CallChannel','Date','AgentSID','Provider','Department','AddedBy'];
   var csv = [h.join(',')].concat(rows.map(function(r){
     return [r.name,r.status,r.statusDuration,r.callNumber,r.callDuration,r.callChannel,r.date,r.agentSID,r.provider,r.department,r.addedBy]
       .map(function(v){ return '"'+(v||'').replace(/"/g,'""')+'"'; }).join(',');
@@ -874,7 +866,7 @@ function exportCSV(){
   a.href = 'data:text/csv,' + encodeURIComponent(csv);
   a.download = 'teams-calls-' + today() + '.csv';
   a.click();
-  showToast('✓ CSV exported!','success');
+  showToast('✓ CSV exported!', 'success');
 }
 
 // ══════════════════════════════════════════════════
@@ -882,42 +874,39 @@ function exportCSV(){
 // ══════════════════════════════════════════════════
 function openModal(id){
   document.getElementById(id).classList.add('open');
-  if(id==='manualModal') document.getElementById('m_date').value = today();
-  if(id==='pasteModal')  setTimeout(function(){ document.getElementById('pasteInput').focus(); }, 120);
+  if(id === 'manualModal') document.getElementById('m_date').value = today();
+  if(id === 'pasteModal')  setTimeout(function(){ document.getElementById('pasteInput').focus(); }, 120);
 }
 function closeModal(id){
   document.getElementById(id).classList.remove('open');
-  if(id==='pasteModal') clearPaste();
+  if(id === 'pasteModal') clearPaste();
 }
 document.querySelectorAll('.modal-backdrop').forEach(function(el){
-  el.addEventListener('click', function(e){ if(e.target===el) closeModal(el.id); });
+  el.addEventListener('click', function(e){ if(e.target === el) closeModal(el.id); });
 });
 
 // ══════════════════════════════════════════════════
-// UI HELPERS
+// UTILS
 // ══════════════════════════════════════════════════
-function setConn(state,msg){
-  var dot=document.getElementById('connDot'), txt=document.getElementById('connText');
-  dot.className = 'conn-dot ' + (state==='ok'?'ok':state==='busy'?'busy':'err');
+function setConn(state, msg){
+  var dot = document.getElementById('connDot'), txt = document.getElementById('connText');
+  dot.className  = 'conn-dot ' + (state==='ok'?'ok':state==='busy'?'busy':'err');
   txt.textContent = msg;
   txt.style.color = state==='ok'?'var(--green)':state==='busy'?'var(--yellow)':'var(--red)';
 }
-function showLoading(msg){ document.getElementById('loadingText').textContent=msg; document.getElementById('loadingOverlay').style.display='flex'; }
-function hideLoading(){ document.getElementById('loadingOverlay').style.display='none'; }
-function showEl(id){ document.getElementById(id).style.display = id==='loginScreen'?'flex':'block'; }
+function showLoading(msg){ document.getElementById('loadingText').textContent = msg; document.getElementById('loadingOverlay').style.display = 'flex'; }
+function hideLoading(){ document.getElementById('loadingOverlay').style.display = 'none'; }
+function showEl(id){ document.getElementById(id).style.display = id === 'loginScreen' ? 'flex' : 'block'; }
 function hideEl(id){ document.getElementById(id).style.display = 'none'; }
-function showToast(msg,type){
-  var t=document.getElementById('toast');
-  t.textContent=msg; t.className=type||'success'; t.style.display='block';
+function showToast(msg, type){
+  var t = document.getElementById('toast');
+  t.textContent = msg; t.className = type || 'success'; t.style.display = 'block';
   clearTimeout(toastTimer);
-  toastTimer=setTimeout(function(){ t.style.display='none'; }, 4000);
+  toastTimer = setTimeout(function(){ t.style.display = 'none'; }, 4000);
 }
 function today(){ return new Date().toISOString().slice(0,10); }
 function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
-// ══════════════════════════════════════════════════
-// START
-// ══════════════════════════════════════════════════
 window.onload = function(){ init(); };
 </script>
 </body>
