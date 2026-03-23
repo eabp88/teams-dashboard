@@ -321,8 +321,9 @@
 // ══════════════════════════════════════════════════
 var CLIENT_ID    = '198a4127-4ad2-4d32-a0cb-beb6d48b3bb0';
 var TENANT_ID    = '88d97709-f0ea-4a21-86f3-f603d653e7c9';
-// Owner's OneDrive user ID — all data stored here
-var OWNER_ID     = '423b73fc-2cdd-48da-a657-dba86e064f62';
+// Owner's email address — all data stored in their OneDrive
+var OWNER_EMAIL  = 'erick.bonilla@thefunctionary.com';
+var OWNER_ID     = '423b73fc-2cdd-48da-a657-dba86e064f62'; // used for admin check only
 var FOLDER_NAME  = 'Twillio Calls Repository';
 var FILE_NAME    = 'teamcalldata.json';
 // Files.ReadWrite does NOT require admin consent
@@ -444,7 +445,8 @@ async function startApp(){
     document.getElementById('userAv').textContent   = ini;
 
     // User is admin if they are the owner of the OneDrive
-    isAdmin = (me.id === OWNER_ID);
+    isAdmin = (me.userPrincipalName && me.userPrincipalName.toLowerCase() === OWNER_EMAIL.toLowerCase()) ||
+              (me.id === OWNER_ID);
     document.getElementById('adminBadge').style.display  = isAdmin ? '' : 'none';
     document.getElementById('clearAllBtn').style.display = isAdmin ? '' : 'none';
 
@@ -463,7 +465,7 @@ async function startApp(){
 // using /users/{OWNER_ID}/drive — accessible to
 // anyone who has been shared the file/folder
 // ══════════════════════════════════════════════════
-var BASE_PATH = '/users/' + OWNER_ID + '/drive/root:/' +
+var BASE_PATH = '/users/' + encodeURIComponent(OWNER_EMAIL) + '/drive/root:/' +
   encodeURIComponent(FOLDER_NAME) + '/' + FILE_NAME;
 
 async function readFile(){
@@ -490,7 +492,7 @@ async function writeFile(records){
   if(!token) return;
   var content = JSON.stringify(records, null, 2);
   var res = await fetch(
-    'https://graph.microsoft.com/v1.0' + BASE_PATH + ':/content',
+    'https://graph.microsoft.com/v1.0/users/' + encodeURIComponent(OWNER_EMAIL) + '/drive/root:/' + encodeURIComponent(FOLDER_NAME) + '/' + FILE_NAME + ':/content',
     {
       method: 'PUT',
       headers:{
