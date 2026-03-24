@@ -550,16 +550,17 @@ async function saveData(){
 
 async function importParsed(){
   if(!parsedRows.length) return;
-  var count = parsedRows.length;
+  // Capture rows BEFORE closing modal (closeModal resets parsedRows via clearPaste)
+  var rowsToSave = parsedRows.slice();
+  var count = rowsToSave.length;
   closeModal('pasteModal');
   showLoading('Saving ' + count + ' records to OneDrive…');
   try{
-    parsedRows.forEach(function(r){
+    rowsToSave.forEach(function(r){
       r.id      = Date.now() + Math.random();
       r.addedBy = account.name || account.username || '';
     });
-    data = data.concat(parsedRows);
-    parsedRows = [];
+    data = data.concat(rowsToSave);
     await saveData();
     document.getElementById('infoCount').textContent = data.length;
     renderAll();
