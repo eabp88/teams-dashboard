@@ -5,7 +5,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Teams Call Dashboard</title>
-<script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.14.0/lib/msal-browser.min.js" crossorigin="anonymous"></script>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <style>
   :root{
@@ -470,28 +470,32 @@ var BASE_PATH = '/users/' + encodeURIComponent(OWNER_EMAIL) + '/drive/root:/' +
 
 async function readFile(){
   try{
-    // Step 1: get file metadata which includes a pre-authenticated download URL
+    // Get file metadata — includes pre-signed downloadUrl
     var meta = await graphFetch('GET',
       '/users/' + encodeURIComponent(OWNER_EMAIL) +
       '/drive/root:/' + encodeURIComponent(FOLDER_NAME) + '/' + FILE_NAME
     );
-    if(!meta) return [];
+    if(!meta){ console.log('readFile: no metadata returned'); return []; }
 
-    // Step 2: use the pre-authenticated download URL (no auth header needed)
     var dlUrl = meta['@microsoft.graph.downloadUrl'];
-    if(!dlUrl) return [];
+    if(!dlUrl){ console.log('readFile: no download URL in metadata', meta); return []; }
 
-    var res = await fetch(dlUrl); // no auth header — URL is pre-signed
-    if(!res.ok) return [];
+    // Fetch content — pre-signed URL needs no auth header
+    var res = await fetch(dlUrl, { mode:'cors' });
+    console.log('readFile: download status', res.status, res.headers.get('content-type'));
+
+    if(!res.ok){ console.log('readFile: download failed', res.status); return []; }
 
     var text = await res.text();
-    if(!text || text.trim() === '') return [];
+    console.log('readFile: content length', text.length, 'preview:', text.slice(0,100));
 
+    if(!text || text.trim() === '') return [];
     var json = JSON.parse(text);
     return Array.isArray(json) ? json : [];
+
   } catch(e){
-    if(e.message.indexOf('404') !== -1 || e.message.indexOf('itemNotFound') !== -1) return [];
     console.error('readFile error:', e.message);
+    if(e.message.indexOf('404') !== -1 || e.message.indexOf('itemNotFound') !== -1) return [];
     throw e;
   }
 }
