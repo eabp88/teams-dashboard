@@ -368,6 +368,7 @@ async function init(){
   showLoading('Checking login…');
   if(!initMsal()){ hideLoading(); showEl('loginScreen'); return; }
   try{
+    await msalApp.initialize(); // required in MSAL v3
     await msalApp.handleRedirectPromise();
     var accounts = msalApp.getAllAccounts();
     if(accounts.length > 0){
