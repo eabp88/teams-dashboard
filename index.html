@@ -472,16 +472,19 @@ async function readFile(){
   try{
     var token = await getToken();
     if(!token) return [];
-    // Get file metadata (includes download URL)
-    var meta = await graphFetch('GET', BASE_PATH);
-    // Download actual content
-    var dlUrl = meta['@microsoft.graph.downloadUrl'];
-    var res   = await fetch(dlUrl);
-    if(!res.ok) return [];
-    var json  = await res.json();
+    var url = 'https://graph.microsoft.com/v1.0/users/' + encodeURIComponent(OWNER_EMAIL) +
+              '/drive/root:/' + encodeURIComponent(FOLDER_NAME) + '/' + FILE_NAME + ':/content';
+    var res = await fetch(url, {
+      headers:{ 'Authorization': 'Bearer ' + token }
+    });
+    if(res.status === 404) return []; // file doesn't exist yet
+    if(!res.ok){
+      var txt = await res.text().catch(function(){ return ''; });
+      throw new Error('Read failed ' + res.status + ': ' + txt.slice(0,200));
+    }
+    var json = await res.json();
     return Array.isArray(json) ? json : [];
   } catch(e){
-    // 404 = file doesn't exist yet, start empty
     if(e.message.indexOf('404') !== -1) return [];
     throw e;
   }
