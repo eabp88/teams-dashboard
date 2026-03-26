@@ -668,6 +668,8 @@ async function toggleComplete(id){
     hideLoading();
   }
 }
+
+async function clearAllData(){
   if(!isAdmin){ showToast('Only admins can clear all data.', 'error'); return; }
   if(!confirm('Delete ALL records? This cannot be undone.')) return;
   showLoading('Clearing all data…');
