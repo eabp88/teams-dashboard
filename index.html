@@ -104,9 +104,10 @@
   .icon-btn{width:27px;height:27px;border-radius:6px;border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .1s;font-size:12px}
   .icon-btn:hover{border-color:var(--red);color:var(--red)}
   /* Complete button */
-  .complete-btn{width:27px;height:27px;border-radius:6px;border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;font-size:14px}
+  .complete-btn{height:27px;padding:0 10px;border-radius:6px;border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;font-size:12px;white-space:nowrap;gap:4px}
   .complete-btn:hover{border-color:var(--green);color:var(--green)}
   .complete-btn.done{border-color:var(--green);background:rgba(34,199,122,.15);color:var(--green)}
+  .actions-cell{display:flex;align-items:center;gap:6px}
   /* Completed row styling */
   tbody tr.row-completed td{opacity:.55}
   tbody tr.row-completed .agent-name{text-decoration:line-through;color:var(--muted)}
@@ -922,7 +923,7 @@ function renderTable(rows){
           : '<span style="color:var(--muted);font-size:11px">⏳ Pending</span>') +
       '</td>' +
       '<td><div class="actions-cell">' +
-        '<button class="complete-btn'+(isDone?' done':'')+'" onclick="toggleComplete('+JSON.stringify(rid)+')" title="'+(isDone?'Mark as pending':'Mark as completed')+'">'+(isDone?'✅':'☑️')+'</button>' +
+        '<button class="complete-btn'+(isDone?' done':'')+'" onclick="toggleComplete('+JSON.stringify(rid)+')" title="'+(isDone?'Unmark':'Mark as completed')+'">'+(isDone?'✅ Done':'☑ Complete')+'</button>' +
         (isAdmin?'<button class="icon-btn" onclick="deleteEntry('+JSON.stringify(rid)+')">✕</button>':'') +
       '</div></td>' +
       '</tr>';
@@ -989,4 +990,3 @@ window.onload = function(){ init(); };
 </script>
 </body>
 </html>
-
