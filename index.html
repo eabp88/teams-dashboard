@@ -103,6 +103,15 @@
   .dept-badge{background:rgba(79,142,247,.1);color:var(--accent);border-radius:6px;padding:2px 8px;font-size:11px;font-weight:500;white-space:nowrap}
   .icon-btn{width:27px;height:27px;border-radius:6px;border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .1s;font-size:12px}
   .icon-btn:hover{border-color:var(--red);color:var(--red)}
+  /* Complete button */
+  .complete-btn{width:27px;height:27px;border-radius:6px;border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;font-size:14px}
+  .complete-btn:hover{border-color:var(--green);color:var(--green)}
+  .complete-btn.done{border-color:var(--green);background:rgba(34,199,122,.15);color:var(--green)}
+  /* Completed row styling */
+  tbody tr.row-completed td{opacity:.55}
+  tbody tr.row-completed .agent-name{text-decoration:line-through;color:var(--muted)}
+  .completed-badge{display:inline-flex;align-items:center;gap:4px;background:rgba(34,199,122,.12);color:var(--green);border:1px solid rgba(34,199,122,.3);border-radius:6px;padding:2px 8px;font-size:10px;font-weight:600;white-space:nowrap}
+  .actions-cell{display:flex;align-items:center;gap:5px}
   .empty-state{text-align:center;padding:56px 32px;color:var(--muted)}
   .empty-state .icon{font-size:40px;margin-bottom:12px;opacity:.4}
   .empty-state h3{font-size:15px;font-weight:500;margin-bottom:6px;color:var(--text)}
@@ -205,6 +214,7 @@
       <div class="stat-card c-red">  <div class="lbl">Busy / On Call</div><div class="val" id="statBusy">0</div></div>
       <div class="stat-card c-green"><div class="lbl">Ready</div>         <div class="val" id="statReady">0</div></div>
       <div class="stat-card c-yellow"><div class="lbl">On Break</div>     <div class="val" id="statBreak">0</div></div>
+      <div class="stat-card c-green"><div class="lbl">✅ Completed</div>  <div class="val" id="statCompleted">0</div></div>
     </div>
 
     <div id="infoBar">
@@ -227,6 +237,11 @@
         <option value="">All Statuses</option><option value="busy">Busy Calls</option>
         <option value="ready">Ready</option><option value="break">Break</option><option value="offline">Offline</option>
       </select>
+      <select class="fsel" id="completedFilter" onchange="filterTable()">
+        <option value="">All Records</option>
+        <option value="pending">⏳ Pending</option>
+        <option value="completed">✅ Completed</option>
+      </select>
       <select class="fsel" id="deptFilter" onchange="filterTable()"><option value="">All Departments</option></select>
       <input type="date" class="fsel" id="dateFilter" onchange="filterTable()"/>
       <button class="btn btn-ghost btn-sm" onclick="clearFilters()">✕ Clear</button>
@@ -246,6 +261,7 @@
           <th onclick="sortTable('department')">Department ↕</th>
           <th>Provider</th>
           <th>Added By</th>
+          <th onclick="sortTable('completed')">Completed ↕</th>
           <th>Actions</th>
         </tr></thead>
         <tbody id="tableBody"></tbody>
@@ -367,9 +383,18 @@ function initMsal(){
 async function init(){
   showLoading('Checking login…');
   if(!initMsal()){ hideLoading(); showEl('loginScreen'); return; }
+
+  // Timeout safety — if MSAL hangs for 8s, show login screen
+  var initTimeout = setTimeout(function(){
+    hideLoading();
+    showEl('loginScreen');
+    console.warn('MSAL init timed out — showing login screen');
+  }, 8000);
+
   try{
-    await msalApp.initialize(); // required in MSAL v3
+    await msalApp.initialize();
     await msalApp.handleRedirectPromise();
+    clearTimeout(initTimeout);
     var accounts = msalApp.getAllAccounts();
     if(accounts.length > 0){
       account = accounts[0];
@@ -379,6 +404,7 @@ async function init(){
       showEl('loginScreen');
     }
   } catch(e){
+    clearTimeout(initTimeout);
     hideLoading();
     showEl('loginScreen');
     showToast('Auth error: ' + e.message, 'error');
@@ -621,7 +647,26 @@ async function deleteEntry(id){
   }
 }
 
-async function clearAllData(){
+async function toggleComplete(id){
+  showLoading('Updating…');
+  try{
+    data = data.map(function(r){
+      if(r.id === id){
+        r.completed   = !r.completed;
+        r.completedBy = r.completed ? (account.name || account.username || '') : '';
+        r.completedAt = r.completed ? today() : '';
+      }
+      return r;
+    });
+    await saveData();
+    renderAll();
+    showToast(data.find(function(r){ return r.id===id; }).completed ? '✅ Marked as completed.' : 'Marked as pending.', 'success');
+  } catch(e){
+    showToast('Update failed: ' + e.message, 'error');
+  } finally {
+    hideLoading();
+  }
+}
   if(!isAdmin){ showToast('Only admins can clear all data.', 'error'); return; }
   if(!confirm('Delete ALL records? This cannot be undone.')) return;
   showLoading('Clearing all data…');
@@ -805,10 +850,11 @@ function renderAll(){
 }
 
 function updateStats(){
-  document.getElementById('statTotal').textContent  = data.length;
-  document.getElementById('statBusy').textContent   = data.filter(function(r){ return /busy/i.test(r.status); }).length;
-  document.getElementById('statReady').textContent  = data.filter(function(r){ return /^ready$/i.test(r.status); }).length;
-  document.getElementById('statBreak').textContent  = data.filter(function(r){ return /^break$/i.test(r.status); }).length;
+  document.getElementById('statTotal').textContent     = data.length;
+  document.getElementById('statBusy').textContent      = data.filter(function(r){ return /busy/i.test(r.status); }).length;
+  document.getElementById('statReady').textContent     = data.filter(function(r){ return /^ready$/i.test(r.status); }).length;
+  document.getElementById('statBreak').textContent     = data.filter(function(r){ return /^break$/i.test(r.status); }).length;
+  document.getElementById('statCompleted').textContent = data.filter(function(r){ return !!r.completed; }).length;
 }
 
 function updateDeptFilter(){
@@ -830,16 +876,18 @@ function getFiltered(){
   var st = document.getElementById('statusFilter').value.toLowerCase();
   var d  = document.getElementById('deptFilter').value;
   var dt = document.getElementById('dateFilter').value;
+  var cf = document.getElementById('completedFilter').value;
   return data.filter(function(r){
     return (!s  || r.name.toLowerCase().indexOf(s) !== -1) &&
            (!st || r.status.toLowerCase().indexOf(st) !== -1) &&
            (!d  || r.department === d) &&
-           (!dt || r.date === dt);
+           (!dt || r.date === dt) &&
+           (!cf || (cf === 'completed' ? r.completed : !r.completed));
   });
 }
 
 function clearFilters(){
-  ['searchInput','statusFilter','deptFilter','dateFilter'].forEach(function(id){ document.getElementById(id).value = ''; });
+  ['searchInput','statusFilter','deptFilter','dateFilter','completedFilter'].forEach(function(id){ document.getElementById(id).value = ''; });
   filterTable();
 }
 
@@ -857,7 +905,8 @@ function renderTable(rows){
     var sc  = /busy/i.test(r.status) ? 'busy' : /^ready$/i.test(r.status) ? 'ready' : /^break$/i.test(r.status) ? 'break' : 'offline';
     var hue = r.name.charCodeAt(0) % 360;
     var rid = r.id;
-    return '<tr style="animation-delay:' + i * .025 + 's">' +
+    var isDone = !!r.completed;
+    return '<tr class="'+(isDone?'row-completed':'')+'" style="animation-delay:' + i * .025 + 's">' +
       '<td><div class="agent-cell"><div class="avatar" style="background:linear-gradient(135deg,hsl('+hue+',60%,55%),hsl('+(hue+40)+',60%,40%))">'+ini+'</div>' +
       '<div><div class="agent-name">'+esc(r.name)+'</div>'+(r.agentSID?'<div class="agent-id">'+esc(r.agentSID.slice(0,18))+'…</div>':'')+'</div></div></td>' +
       '<td><span class="sbadge s-'+sc+'"><span class="sdot"></span>'+esc(r.status)+'</span>'+(r.statusDuration?'<div class="mono-sm" style="margin-top:3px">'+esc(r.statusDuration)+'</div>':'')+'</td>' +
@@ -867,7 +916,15 @@ function renderTable(rows){
       '<td><span class="dept-badge">'+esc(r.department||'—')+'</span></td>' +
       '<td class="mono-sm">'+esc(r.provider||'—')+'</td>' +
       '<td class="mono-sm">'+esc(r.addedBy||'—')+'</td>' +
-      '<td>'+(isAdmin?'<button class="icon-btn" onclick="deleteEntry('+JSON.stringify(rid)+')">✕</button>':'<span style="color:var(--border2);font-size:11px">—</span>')+'</td>' +
+      '<td>' +
+        (isDone
+          ? '<span class="completed-badge">✅ Done</span>'+(r.completedBy?'<div class="mono-sm" style="margin-top:3px">'+esc(r.completedBy)+'</div>':'')
+          : '<span style="color:var(--muted);font-size:11px">⏳ Pending</span>') +
+      '</td>' +
+      '<td><div class="actions-cell">' +
+        '<button class="complete-btn'+(isDone?' done':'')+'" onclick="toggleComplete('+JSON.stringify(rid)+')" title="'+(isDone?'Mark as pending':'Mark as completed')+'">'+(isDone?'✅':'☑️')+'</button>' +
+        (isAdmin?'<button class="icon-btn" onclick="deleteEntry('+JSON.stringify(rid)+')">✕</button>':'') +
+      '</div></td>' +
       '</tr>';
   }).join('');
 }
@@ -932,3 +989,4 @@ window.onload = function(){ init(); };
 </script>
 </body>
 </html>
+
