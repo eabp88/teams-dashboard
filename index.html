@@ -330,7 +330,21 @@
   </div>
 </div>
 
-<div id="toast"></div>
+<!-- COMPLETE MODAL -->
+<div class="modal-backdrop" id="completeModal">
+  <div class="modal" style="max-width:420px">
+    <h3>✅ Mark as Completed</h3>
+    <p>Enter the name of the person who completed this call.</p>
+    <div class="form-field" style="margin-bottom:14px">
+      <label>Completed By *</label>
+      <input id="completedByInput" type="text" placeholder="Your name…" style="font-size:14px;padding:11px 14px" onkeydown="if(event.key==='Enter') confirmComplete()"/>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('completeModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmComplete()">✅ Confirm Complete</button>
+    </div>
+  </div>
+</div>
 
 <script>
 // ══════════════════════════════════════════════════
@@ -648,20 +662,68 @@ async function deleteEntry(id){
   }
 }
 
-async function toggleComplete(id){
-  showLoading('Updating…');
+var pendingCompleteId = null;
+
+function toggleComplete(id){
+  // Find the record
+  var rec = data.find(function(r){ return r.id === id; });
+  if(!rec) return;
+
+  if(rec.completed){
+    // Already done — unmark immediately without asking
+    unmarkComplete(id);
+  } else {
+    // Show modal to enter who completed it
+    pendingCompleteId = id;
+    // Pre-fill with logged-in user's name
+    document.getElementById('completedByInput').value = account.name || account.username || '';
+    openModal('completeModal');
+    setTimeout(function(){
+      var inp = document.getElementById('completedByInput');
+      inp.focus(); inp.select();
+    }, 150);
+  }
+}
+
+async function confirmComplete(){
+  var name = document.getElementById('completedByInput').value.trim();
+  if(!name){ showToast('Please enter a name.', 'error'); return; }
+  closeModal('completeModal');
+  showLoading('Saving…');
   try{
     data = data.map(function(r){
-      if(r.id === id){
-        r.completed   = !r.completed;
-        r.completedBy = r.completed ? (account.name || account.username || '') : '';
-        r.completedAt = r.completed ? today() : '';
+      if(r.id === pendingCompleteId){
+        r.completed   = true;
+        r.completedBy = name;
+        r.completedAt = today();
       }
       return r;
     });
     await saveData();
     renderAll();
-    showToast(data.find(function(r){ return r.id===id; }).completed ? '✅ Marked as completed.' : 'Marked as pending.', 'success');
+    showToast('✅ Marked as completed by ' + name + '.', 'success');
+  } catch(e){
+    showToast('Update failed: ' + e.message, 'error');
+  } finally {
+    hideLoading();
+    pendingCompleteId = null;
+  }
+}
+
+async function unmarkComplete(id){
+  showLoading('Updating…');
+  try{
+    data = data.map(function(r){
+      if(r.id === id){
+        r.completed   = false;
+        r.completedBy = '';
+        r.completedAt = '';
+      }
+      return r;
+    });
+    await saveData();
+    renderAll();
+    showToast('Marked as pending.', 'success');
   } catch(e){
     showToast('Update failed: ' + e.message, 'error');
   } finally {
@@ -921,7 +983,9 @@ function renderTable(rows){
       '<td class="mono-sm">'+esc(r.addedBy||'—')+'</td>' +
       '<td>' +
         (isDone
-          ? '<span class="completed-badge">✅ Done</span>'+(r.completedBy?'<div class="mono-sm" style="margin-top:3px">'+esc(r.completedBy)+'</div>':'')
+          ? '<span class="completed-badge">✅ Done</span>' +
+            (r.completedBy ? '<div class="mono-sm" style="margin-top:3px;color:var(--green)">'+esc(r.completedBy)+'</div>' : '') +
+            (r.completedAt ? '<div class="mono-sm">'+esc(r.completedAt)+'</div>' : '')
           : '<span style="color:var(--muted);font-size:11px">⏳ Pending</span>') +
       '</td>' +
       '<td><div class="actions-cell">' +
