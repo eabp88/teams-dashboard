@@ -539,49 +539,38 @@ async function startApp(){
 var BASE_PATH = '/users/' + encodeURIComponent(OWNER_EMAIL) + '/drive/root:/' +
   encodeURIComponent(FOLDER_NAME) + '/' + FILE_NAME;
 
-// ══════════════════════════════════════════════════
-// PUBLIC READ URL
-// After sharing teamcalldata.json in OneDrive:
-// 1. Share → "Anyone with the link can view" → Copy link
-// 2. Convert share URL to direct download URL and paste below
-// Format: https://thefunctionary-my.sharepoint.com/:u:/g/personal/...
-// Leave empty ('') until you paste the share link
-var PUBLIC_READ_URL = 'https://thefunctionary-my.sharepoint.com/:u:/p/erick_bonilla/IQC2qUN4N8YpSajpvgeqr3X9ARwWC-QbEPyKh2rhLpkHqQ0?e=95DIQJ&download=1';
+// Share URL for the teamcalldata.json file (shared as "Anyone with link can view")
+var SHARE_URL = 'https://thefunctionary-my.sharepoint.com/:u:/p/erick_bonilla/IQC2qUN4N8YpSajpvgeqr3X9ARwWC-QbEPyKh2rhLpkHqQ0?e=95DIQJ';
 
-function getDirectDownloadUrl(shareUrl){
-  return shareUrl; // already a direct download URL with &download=1
+function encodeShareUrl(url){
+  // Graph API requires base64url encoding of the share URL prefixed with u!
+  var b64 = btoa(url).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_');
+  return 'u!' + b64;
 }
 
 async function readFile(){
   try{
-    // Try public URL first (works for everyone, no auth needed)
-    var pubUrl = PUBLIC_READ_URL ? getDirectDownloadUrl(PUBLIC_READ_URL) : '';
-    if(pubUrl){
-      var res = await fetch(pubUrl);
-      if(res.ok){
-        var text = await res.text();
-        if(text && text.trim() !== '' && text.trim() !== '[]'){
-          var json = JSON.parse(text);
-          return Array.isArray(json) ? json : [];
-        }
-        return [];
-      }
-    }
-
-    // Fallback: authenticated read (only works for Erick)
     var token = await getToken();
     if(!token) return [];
-    var url = 'https://graph.microsoft.com/v1.0/users/' + encodeURIComponent(OWNER_EMAIL) +
-              '/drive/root:/' + encodeURIComponent(FOLDER_NAME) + '/' + FILE_NAME + ':/content';
-    var authRes = await fetch(url, {
-      headers:{ 'Authorization': 'Bearer ' + token }
-    });
-    if(authRes.status === 404) return [];
-    if(!authRes.ok) throw new Error('Read failed ' + authRes.status);
-    var authText = await authRes.text();
-    if(!authText || authText.trim() === '') return [];
-    var authJson = JSON.parse(authText);
-    return Array.isArray(authJson) ? authJson : [];
+
+    // Use Graph shares API — works for any authenticated user
+    // as long as file is shared as "Anyone with the link can view"
+    var shareId = encodeShareUrl(SHARE_URL);
+    var res = await fetch(
+      'https://graph.microsoft.com/v1.0/shares/' + shareId + '/driveItem/content',
+      { headers:{ 'Authorization': 'Bearer ' + token } }
+    );
+
+    if(res.status === 404) return [];
+    if(!res.ok){
+      var txt = await res.text().catch(function(){ return ''; });
+      throw new Error('Read failed ' + res.status + ': ' + txt.slice(0,150));
+    }
+
+    var text = await res.text();
+    if(!text || text.trim() === '') return [];
+    var json = JSON.parse(text);
+    return Array.isArray(json) ? json : [];
 
   } catch(e){
     console.error('readFile error:', e.message);
