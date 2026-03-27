@@ -546,18 +546,10 @@ var BASE_PATH = '/users/' + encodeURIComponent(OWNER_EMAIL) + '/drive/root:/' +
 // 2. Convert share URL to direct download URL and paste below
 // Format: https://thefunctionary-my.sharepoint.com/:u:/g/personal/...
 // Leave empty ('') until you paste the share link
-var PUBLIC_READ_URL = 'https://thefunctionary-my.sharepoint.com/:u:/p/erick_bonilla/IQC2qUN4N8YpSajpvgeqr3X9ARwWC-QbEPyKh2rhLpkHqQ0?e=95DIQJ';
+var PUBLIC_READ_URL = 'https://thefunctionary-my.sharepoint.com/:u:/p/erick_bonilla/IQC2qUN4N8YpSajpvgeqr3X9ARwWC-QbEPyKh2rhLpkHqQ0?e=95DIQJ&download=1';
 
 function getDirectDownloadUrl(shareUrl){
-  // Convert OneDrive share URL to direct download URL
-  if(!shareUrl) return '';
-  // Handle sharepoint share links
-  if(shareUrl.indexOf('1drv.ms') !== -1 || shareUrl.indexOf('sharepoint.com') !== -1){
-    // Encode the share URL to base64 for Graph API
-    var encoded = btoa(shareUrl).replace(/=/g,'').replace(/\//g,'_').replace(/\+/g,'-');
-    return 'https://api.onedrive.com/v1.0/shares/u!' + encoded + '/root/content';
-  }
-  return shareUrl;
+  return shareUrl; // already a direct download URL with &download=1
 }
 
 async function readFile(){
@@ -630,9 +622,6 @@ async function refreshData(){
     document.getElementById('infoTime').textContent  = new Date().toLocaleTimeString();
     document.getElementById('infoCount').textContent = data.length;
     renderAll();
-    if(data.length === 0){
-      showToast('Connected — no records saved yet. Paste data from Twilio to get started.','info');
-    }
   } catch(e){
     showToast('Could not load data: ' + e.message, 'error');
     setConn('err', 'Read failed: ' + e.message);
