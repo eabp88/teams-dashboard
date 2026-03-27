@@ -195,8 +195,8 @@
         <span class="admin-badge" id="adminBadge" style="display:none">ADMIN</span>
       </div>
       <button class="btn btn-ghost btn-sm" onclick="refreshData()">↻ Refresh</button>
-      <button class="btn btn-ghost" onclick="openModal('pasteModal')">📋 Paste from Twilio</button>
-      <button class="btn btn-primary" onclick="openModal('manualModal')">+ Add Entry</button>
+      <button class="btn btn-ghost" id="pasteBtn" onclick="openModal('pasteModal')" style="display:none">📋 Paste from Twilio</button>
+      <button class="btn btn-primary" id="addBtn" onclick="openModal('manualModal')" style="display:none">+ Add Entry</button>
     </div>
   </header>
 
@@ -330,7 +330,6 @@
   </div>
 </div>
 
-<!-- COMPLETE MODAL -->
 <div class="modal-backdrop" id="completeModal">
   <div class="modal" style="max-width:420px">
     <h3>✅ Mark as Completed</h3>
@@ -374,8 +373,19 @@ var toastTimer = null;
 var parseTimer = null;
 
 // ══════════════════════════════════════════════════
-// MSAL
+// ROLES — edit these lists to control access
 // ══════════════════════════════════════════════════
+// OWNER: can paste data, add, delete, clear all
+var OWNER_EMAILS = [
+  'erick.bonilla@thefunctionary.com'
+];
+// TEAM MEMBERS: can mark calls as complete, view data
+// Add colleague emails here — one per line
+var TEAM_EMAILS = [
+  // 'colleague1@thefunctionary.com',
+  // 'colleague2@thefunctionary.com',
+];
+// Everyone else who signs in can only VIEW (read-only)
 function initMsal(){
   if(typeof msal === 'undefined'){
     showToast('Microsoft login library failed to load. Please refresh.','error');
@@ -482,15 +492,34 @@ async function startApp(){
   try{
     var me   = await graphFetch('GET', '/me?$select=displayName,userPrincipalName,id');
     var name = me.displayName || me.userPrincipalName || 'User';
+    var email = (me.userPrincipalName || '').toLowerCase();
     var ini  = name.split(' ').slice(0,2).map(function(w){ return w[0]||''; }).join('').toUpperCase();
     document.getElementById('userName').textContent = name;
     document.getElementById('userAv').textContent   = ini;
 
-    // User is admin if they are the owner of the OneDrive
-    isAdmin = (me.userPrincipalName && me.userPrincipalName.toLowerCase() === OWNER_EMAIL.toLowerCase()) ||
-              (me.id === OWNER_ID);
-    document.getElementById('adminBadge').style.display  = isAdmin ? '' : 'none';
-    document.getElementById('clearAllBtn').style.display = isAdmin ? '' : 'none';
+    // Determine role
+    var isOwner  = OWNER_EMAILS.map(function(e){ return e.toLowerCase(); }).indexOf(email) !== -1;
+    var isMember = isOwner || TEAM_EMAILS.map(function(e){ return e.toLowerCase(); }).indexOf(email) !== -1;
+    isAdmin = isOwner; // admin = owner only
+
+    // Apply role to UI
+    // Owner sees everything
+    document.getElementById('pasteBtn').style.display  = isOwner ? '' : 'none';
+    document.getElementById('addBtn').style.display    = isOwner ? '' : 'none';
+    document.getElementById('adminBadge').style.display = isOwner ? '' : 'none';
+    document.getElementById('clearAllBtn').style.display = isOwner ? '' : 'none';
+
+    // Member badge for team members (non-owners)
+    if(isMember && !isOwner){
+      document.getElementById('adminBadge').textContent = 'TEAM';
+      document.getElementById('adminBadge').style.display = '';
+      document.getElementById('adminBadge').style.background = 'rgba(79,142,247,.15)';
+      document.getElementById('adminBadge').style.color = 'var(--accent)';
+      document.getElementById('adminBadge').style.borderColor = 'rgba(79,142,247,.3)';
+    }
+
+    // Store role globally for renderTable to use
+    window.userCanComplete = isMember;
 
     setConn('ok', 'Connected · Twillio Calls Repository · OneDrive');
     await refreshData();
@@ -989,7 +1018,9 @@ function renderTable(rows){
           : '<span style="color:var(--muted);font-size:11px">⏳ Pending</span>') +
       '</td>' +
       '<td><div class="actions-cell">' +
-        '<button class="complete-btn'+(isDone?' done':'')+'" onclick="toggleComplete('+JSON.stringify(rid)+')" title="'+(isDone?'Unmark':'Mark as completed')+'">'+(isDone?'✅ Done':'☑ Complete')+'</button>' +
+        (window.userCanComplete
+          ? '<button class="complete-btn'+(isDone?' done':'')+'" onclick="toggleComplete('+JSON.stringify(rid)+')" title="'+(isDone?'Unmark':'Mark as completed')+'">'+(isDone?'✅ Done':'☑ Complete')+'</button>'
+          : '<span style="color:var(--border2);font-size:11px">—</span>') +
         (isAdmin?'<button class="icon-btn" onclick="deleteEntry('+JSON.stringify(rid)+')">✕</button>':'') +
       '</div></td>' +
       '</tr>';
