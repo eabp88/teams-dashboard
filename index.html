@@ -539,30 +539,57 @@ async function startApp(){
 var BASE_PATH = '/users/' + encodeURIComponent(OWNER_EMAIL) + '/drive/root:/' +
   encodeURIComponent(FOLDER_NAME) + '/' + FILE_NAME;
 
+// ══════════════════════════════════════════════════
+// PUBLIC READ URL
+// After sharing teamcalldata.json in OneDrive:
+// 1. Share → "Anyone with the link can view" → Copy link
+// 2. Convert share URL to direct download URL and paste below
+// Format: https://thefunctionary-my.sharepoint.com/:u:/g/personal/...
+// Leave empty ('') until you paste the share link
+var PUBLIC_READ_URL = 'https://thefunctionary-my.sharepoint.com/:u:/p/erick_bonilla/IQC2qUN4N8YpSajpvgeqr3X9ARwWC-QbEPyKh2rhLpkHqQ0?e=95DIQJ';
+
+function getDirectDownloadUrl(shareUrl){
+  // Convert OneDrive share URL to direct download URL
+  if(!shareUrl) return '';
+  // Handle sharepoint share links
+  if(shareUrl.indexOf('1drv.ms') !== -1 || shareUrl.indexOf('sharepoint.com') !== -1){
+    // Encode the share URL to base64 for Graph API
+    var encoded = btoa(shareUrl).replace(/=/g,'').replace(/\//g,'_').replace(/\+/g,'-');
+    return 'https://api.onedrive.com/v1.0/shares/u!' + encoded + '/root/content';
+  }
+  return shareUrl;
+}
+
 async function readFile(){
   try{
-    // Get file metadata — includes pre-signed downloadUrl
-    var meta = await graphFetch('GET',
-      '/users/' + encodeURIComponent(OWNER_EMAIL) +
-      '/drive/root:/' + encodeURIComponent(FOLDER_NAME) + '/' + FILE_NAME
-    );
-    if(!meta){ console.log('readFile: no metadata returned'); return []; }
+    // Try public URL first (works for everyone, no auth needed)
+    var pubUrl = PUBLIC_READ_URL ? getDirectDownloadUrl(PUBLIC_READ_URL) : '';
+    if(pubUrl){
+      var res = await fetch(pubUrl);
+      if(res.ok){
+        var text = await res.text();
+        if(text && text.trim() !== '' && text.trim() !== '[]'){
+          var json = JSON.parse(text);
+          return Array.isArray(json) ? json : [];
+        }
+        return [];
+      }
+    }
 
-    var dlUrl = meta['@microsoft.graph.downloadUrl'];
-    if(!dlUrl){ console.log('readFile: no download URL in metadata', meta); return []; }
-
-    // Fetch content — pre-signed URL needs no auth header
-    var res = await fetch(dlUrl, { mode:'cors' });
-    console.log('readFile: download status', res.status, res.headers.get('content-type'));
-
-    if(!res.ok){ console.log('readFile: download failed', res.status); return []; }
-
-    var text = await res.text();
-    console.log('readFile: content length', text.length, 'preview:', text.slice(0,100));
-
-    if(!text || text.trim() === '') return [];
-    var json = JSON.parse(text);
-    return Array.isArray(json) ? json : [];
+    // Fallback: authenticated read (only works for Erick)
+    var token = await getToken();
+    if(!token) return [];
+    var url = 'https://graph.microsoft.com/v1.0/users/' + encodeURIComponent(OWNER_EMAIL) +
+              '/drive/root:/' + encodeURIComponent(FOLDER_NAME) + '/' + FILE_NAME + ':/content';
+    var authRes = await fetch(url, {
+      headers:{ 'Authorization': 'Bearer ' + token }
+    });
+    if(authRes.status === 404) return [];
+    if(!authRes.ok) throw new Error('Read failed ' + authRes.status);
+    var authText = await authRes.text();
+    if(!authText || authText.trim() === '') return [];
+    var authJson = JSON.parse(authText);
+    return Array.isArray(authJson) ? authJson : [];
 
   } catch(e){
     console.error('readFile error:', e.message);
@@ -1076,11 +1103,18 @@ function showEl(id){ document.getElementById(id).style.display = id === 'loginSc
 function hideEl(id){ document.getElementById(id).style.display = 'none'; }
 function showToast(msg, type){
   var t = document.getElementById('toast');
+  if(!t){ console.warn('Toast:', msg); return; }
   t.textContent = msg; t.className = type || 'success'; t.style.display = 'block';
   clearTimeout(toastTimer);
   toastTimer = setTimeout(function(){ t.style.display = 'none'; }, 4000);
 }
-function today(){ return new Date().toISOString().slice(0,10); }
+function today(){
+  var d = new Date();
+  var y = d.getFullYear();
+  var m = String(d.getMonth()+1).padStart(2,'0');
+  var day = String(d.getDate()).padStart(2,'0');
+  return y + '-' + m + '-' + day;
+}
 function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 window.onload = function(){ init(); };
