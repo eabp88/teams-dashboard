@@ -400,8 +400,8 @@ var OWNER_EMAILS = [
 // TEAM MEMBERS: can mark calls as complete, view data
 // Add colleague emails here — one per line
 var TEAM_EMAILS = [
- 'Andres.Staben@thefunctionary.com',
-  'jose.amaya@thefunctionary.com',
+  // 'colleague1@thefunctionary.com',
+  // 'colleague2@thefunctionary.com',
 ];
 // Everyone else who signs in can only VIEW (read-only)
 function initMsal(){
@@ -423,19 +423,24 @@ function initMsal(){
 // ══════════════════════════════════════════════════
 // AUTH
 // ══════════════════════════════════════════════════
+var appAborted = false;
+
 async function init(){
+  appAborted = false;
   showLoading('Checking login…');
   if(!initMsal()){ hideLoading(); showEl('loginScreen'); return; }
 
-  // Timeout safety — if MSAL hangs for 8s, show login screen
+  // If still loading after 6s — give up and show login screen
   var initTimeout = setTimeout(function(){
+    appAborted = true;
     hideLoading();
     showEl('loginScreen');
-    console.warn('MSAL init timed out — showing login screen');
-  }, 8000);
+    console.warn('MSAL timed out');
+  }, 6000);
 
   try{
     await msalApp.handleRedirectPromise();
+    if(appAborted) return;
     clearTimeout(initTimeout);
     var accounts = msalApp.getAllAccounts();
     if(accounts.length > 0){
@@ -446,10 +451,11 @@ async function init(){
       showEl('loginScreen');
     }
   } catch(e){
+    if(appAborted) return;
     clearTimeout(initTimeout);
     hideLoading();
     showEl('loginScreen');
-    showToast('Auth error: ' + e.message, 'error');
+    console.warn('Auth error:', e.message);
   }
 }
 
@@ -583,13 +589,16 @@ async function readFile(){
     var token = await getToken();
     if(!token) return [];
 
-    // Use Graph shares API — works for any authenticated user
-    // as long as file is shared as "Anyone with the link can view"
+    // 10 second timeout on the fetch
+    var controller = new AbortController();
+    var fetchTimeout = setTimeout(function(){ controller.abort(); }, 10000);
+
     var shareId = encodeShareUrl(SHARE_URL);
     var res = await fetch(
       'https://graph.microsoft.com/v1.0/shares/' + shareId + '/driveItem/content',
-      { headers:{ 'Authorization': 'Bearer ' + token } }
+      { headers:{ 'Authorization': 'Bearer ' + token }, signal: controller.signal }
     );
+    clearTimeout(fetchTimeout);
 
     if(res.status === 404) return [];
     if(!res.ok){
@@ -605,6 +614,7 @@ async function readFile(){
   } catch(e){
     console.error('readFile error:', e.message);
     if(e.message.indexOf('404') !== -1 || e.message.indexOf('itemNotFound') !== -1) return [];
+    if(e.name === 'AbortError') return []; // timed out — return empty gracefully
     throw e;
   }
 }
