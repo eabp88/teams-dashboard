@@ -184,9 +184,9 @@
     <p style="color:var(--muted);font-size:13px;margin-bottom:28px;line-height:1.6">
       Please contact <strong style="color:var(--text)">Erick Bonilla</strong> to request access.
     </p>
-    <a href="/cdn-cgi/l/email-protection#3356415a50581d515c5d5a5f5f5273475b5655465d50475a5c5d52414a1d505c5e0c404651595650470e6756525e40137752405b515c524157137250505640401361564246564047" style="display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:#fff;padding:11px 22px;border-radius:9px;font-size:13px;font-weight:600;text-decoration:none;margin-bottom:12px">
+    <button onclick="requestAccess()" style="display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:#fff;padding:11px 22px;border-radius:9px;font-size:13px;font-weight:600;text-decoration:none;margin-bottom:12px;border:none;cursor:pointer">
       ✉️ Request Access
-    </a>
+    </button>
     <div style="margin-top:12px">
       <a href="https://eabp88.github.io/teams-dashboard" style="font-size:12px;color:var(--muted);text-decoration:underline">← Try a different account</a>
     </div>
@@ -1120,7 +1120,16 @@ function showToast(msg, type){
   clearTimeout(toastTimer);
   toastTimer = setTimeout(function(){ t.style.display = 'none'; }, 4000);
 }
-function today(){
+function requestAccess(){
+  // Build email in JS so Cloudflare can't obfuscate it
+  var user   = 'erick.bonilla';
+  var domain = 'thefunctionary.com';
+  var denied = document.getElementById('accessDeniedEmail');
+  var who    = denied ? denied.textContent : '';
+  var subject = encodeURIComponent('Teams Dashboard Access Request');
+  var body    = encodeURIComponent('Hi Erick,\n\nI would like to request access to the Teams Call Dashboard.\n\nMy email: ' + who);
+  window.location.href = 'mailto:' + user + '@' + domain + '?subject=' + subject + '&body=' + body;
+}
   var d = new Date();
   var y = d.getFullYear();
   var m = String(d.getMonth()+1).padStart(2,'0');
