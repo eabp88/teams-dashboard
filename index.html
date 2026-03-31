@@ -382,9 +382,10 @@ var OWNER_EMAILS = [
 // TEAM MEMBERS: can mark calls as complete, view data
 // Add colleague emails here — one per line
 var TEAM_EMAILS = [
-  diego.fuentes@thefunctionary.com,
-  Andres.Staben@thefunctionary.com,
+  // 'colleague1@thefunctionary.com',
+  // 'colleague2@thefunctionary.com',
 ];
+// Everyone else who signs in can only VIEW (read-only)
 function initMsal(){
   if(typeof msal === 'undefined'){
     showToast('Microsoft login library failed to load. Please refresh.','error');
