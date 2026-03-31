@@ -173,8 +173,25 @@
   </div>
 </div>
 
-<!-- APP -->
-<div id="app" style="display:none">
+<!-- ACCESS DENIED SCREEN -->
+<div id="accessDeniedScreen" style="display:none;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:32px">
+  <div style="background:var(--surface);border:1px solid var(--red);border-radius:20px;padding:48px 40px;text-align:center;max-width:440px;width:100%">
+    <div style="width:56px;height:56px;background:rgba(242,87,87,.15);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 20px">🚫</div>
+    <h1 style="font-size:20px;font-weight:700;margin-bottom:8px;color:var(--red)">Access Denied</h1>
+    <p style="color:var(--muted);font-size:14px;margin-bottom:16px;line-height:1.6">
+      Your account (<strong id="accessDeniedEmail" style="color:var(--text)"></strong>) does not have permission to access the Teams Call Dashboard.
+    </p>
+    <p style="color:var(--muted);font-size:13px;margin-bottom:28px;line-height:1.6">
+      Please contact <strong style="color:var(--text)">Erick Bonilla</strong> to request access.
+    </p>
+    <a href="mailto:erick.bonilla@thefunctionary.com?subject=Teams Dashboard Access Request" style="display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:#fff;padding:11px 22px;border-radius:9px;font-size:13px;font-weight:600;text-decoration:none;margin-bottom:12px">
+      ✉️ Request Access
+    </a>
+    <div style="margin-top:12px">
+      <a href="https://eabp88.github.io/teams-dashboard" style="font-size:12px;color:var(--muted);text-decoration:underline">← Try a different account</a>
+    </div>
+  </div>
+</div>
   <div id="connBar">
     <div class="conn-dot" id="connDot"></div>
     <span id="connText" style="color:var(--muted)">Connecting…</span>
@@ -488,37 +505,46 @@ async function graphFetch(method, path, body){
 async function startApp(){
   hideEl('loginScreen');
   showEl('app');
-  showLoading('Connecting to OneDrive…');
+  showLoading('Checking access…');
   try{
-    var me   = await graphFetch('GET', '/me?$select=displayName,userPrincipalName,id');
-    var name = me.displayName || me.userPrincipalName || 'User';
+    var me    = await graphFetch('GET', '/me?$select=displayName,userPrincipalName,id');
+    var name  = me.displayName || me.userPrincipalName || 'User';
     var email = (me.userPrincipalName || '').toLowerCase();
-    var ini  = name.split(' ').slice(0,2).map(function(w){ return w[0]||''; }).join('').toUpperCase();
-    document.getElementById('userName').textContent = name;
-    document.getElementById('userAv').textContent   = ini;
+    var ini   = name.split(' ').slice(0,2).map(function(w){ return w[0]||''; }).join('').toUpperCase();
 
     // Determine role
     var isOwner  = OWNER_EMAILS.map(function(e){ return e.toLowerCase(); }).indexOf(email) !== -1;
     var isMember = isOwner || TEAM_EMAILS.map(function(e){ return e.toLowerCase(); }).indexOf(email) !== -1;
-    isAdmin = isOwner; // admin = owner only
+    isAdmin = isOwner;
 
-    // Apply role to UI
-    // Owner sees everything
-    document.getElementById('pasteBtn').style.display  = isOwner ? '' : 'none';
-    document.getElementById('addBtn').style.display    = isOwner ? '' : 'none';
-    document.getElementById('adminBadge').style.display = isOwner ? '' : 'none';
-    document.getElementById('clearAllBtn').style.display = isOwner ? '' : 'none';
-
-    // Member badge for team members (non-owners)
-    if(isMember && !isOwner){
-      document.getElementById('adminBadge').textContent = 'TEAM';
-      document.getElementById('adminBadge').style.display = '';
-      document.getElementById('adminBadge').style.background = 'rgba(79,142,247,.15)';
-      document.getElementById('adminBadge').style.color = 'var(--accent)';
-      document.getElementById('adminBadge').style.borderColor = 'rgba(79,142,247,.3)';
+    // ── ACCESS DENIED — not in either list ──────────
+    if(!isMember){
+      hideLoading();
+      hideEl('app');
+      document.getElementById('accessDeniedEmail').textContent = email;
+      showEl('accessDeniedScreen');
+      // Sign out silently so they don't stay authenticated
+      try{ msalApp.logoutRedirect({ account:account, postLogoutRedirectUri: window.location.href }); }catch(e){}
+      return;
     }
 
-    // Store role globally for renderTable to use
+    // ── AUTHORISED — set up UI ───────────────────────
+    document.getElementById('userName').textContent = name;
+    document.getElementById('userAv').textContent   = ini;
+
+    document.getElementById('pasteBtn').style.display    = isOwner ? '' : 'none';
+    document.getElementById('addBtn').style.display      = isOwner ? '' : 'none';
+    document.getElementById('adminBadge').style.display  = isOwner ? '' : 'none';
+    document.getElementById('clearAllBtn').style.display = isOwner ? '' : 'none';
+
+    if(isMember && !isOwner){
+      document.getElementById('adminBadge').textContent   = 'TEAM';
+      document.getElementById('adminBadge').style.display = '';
+      document.getElementById('adminBadge').style.background   = 'rgba(79,142,247,.15)';
+      document.getElementById('adminBadge').style.color        = 'var(--accent)';
+      document.getElementById('adminBadge').style.borderColor  = 'rgba(79,142,247,.3)';
+    }
+
     window.userCanComplete = isMember;
 
     setConn('ok', 'Connected · Twillio Calls Repository · OneDrive');
@@ -1077,7 +1103,11 @@ function setConn(state, msg){
 }
 function showLoading(msg){ document.getElementById('loadingText').textContent = msg; document.getElementById('loadingOverlay').style.display = 'flex'; }
 function hideLoading(){ document.getElementById('loadingOverlay').style.display = 'none'; }
-function showEl(id){ document.getElementById(id).style.display = id === 'loginScreen' ? 'flex' : 'block'; }
+function showEl(id){
+  var el = document.getElementById(id);
+  if(!el) return;
+  el.style.display = (id==='loginScreen'||id==='accessDeniedScreen') ? 'flex' : 'block';
+}
 function hideEl(id){ document.getElementById(id).style.display = 'none'; }
 function showToast(msg, type){
   var t = document.getElementById('toast');
