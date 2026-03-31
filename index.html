@@ -184,7 +184,7 @@
     <p style="color:var(--muted);font-size:13px;margin-bottom:28px;line-height:1.6">
       Please contact <strong style="color:var(--text)">Erick Bonilla</strong> to request access.
     </p>
-    <a href="mailto:erick.bonilla@thefunctionary.com?subject=Teams Dashboard Access Request" style="display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:#fff;padding:11px 22px;border-radius:9px;font-size:13px;font-weight:600;text-decoration:none;margin-bottom:12px">
+    <a href="/cdn-cgi/l/email-protection#3356415a50581d515c5d5a5f5f5273475b5655465d50475a5c5d52414a1d505c5e0c404651595650470e6756525e40137752405b515c524157137250505640401361564246564047" style="display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:#fff;padding:11px 22px;border-radius:9px;font-size:13px;font-weight:600;text-decoration:none;margin-bottom:12px">
       ✉️ Request Access
     </a>
     <div style="margin-top:12px">
@@ -362,7 +362,7 @@
   </div>
 </div>
 
-<script>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
 // ══════════════════════════════════════════════════
 // CONFIG
 // ══════════════════════════════════════════════════
@@ -503,56 +503,60 @@ async function graphFetch(method, path, body){
 // START
 // ══════════════════════════════════════════════════
 async function startApp(){
-  hideEl('loginScreen');
-  showEl('app');
   showLoading('Checking access…');
   try{
     var me    = await graphFetch('GET', '/me?$select=displayName,userPrincipalName,id');
     var name  = me.displayName || me.userPrincipalName || 'User';
     var email = (me.userPrincipalName || '').toLowerCase();
-    var ini   = name.split(' ').slice(0,2).map(function(w){ return w[0]||''; }).join('').toUpperCase();
 
-    // Determine role
+    // ── CHECK ACCESS FIRST before showing anything ───
     var isOwner  = OWNER_EMAILS.map(function(e){ return e.toLowerCase(); }).indexOf(email) !== -1;
     var isMember = isOwner || TEAM_EMAILS.map(function(e){ return e.toLowerCase(); }).indexOf(email) !== -1;
-    isAdmin = isOwner;
 
-    // ── ACCESS DENIED — not in either list ──────────
     if(!isMember){
       hideLoading();
-      hideEl('app');
+      // Show access denied screen — never show the app
       document.getElementById('accessDeniedEmail').textContent = email;
       showEl('accessDeniedScreen');
-      // Sign out silently so they don't stay authenticated
-      try{ msalApp.logoutRedirect({ account:account, postLogoutRedirectUri: window.location.href }); }catch(e){}
       return;
     }
 
-    // ── AUTHORISED — set up UI ───────────────────────
+    // ── AUTHORISED — now show the app ────────────────
+    hideEl('loginScreen');
+    showEl('app');
+    isAdmin = isOwner;
+
+    var ini = name.split(' ').slice(0,2).map(function(w){ return w[0]||''; }).join('').toUpperCase();
     document.getElementById('userName').textContent = name;
     document.getElementById('userAv').textContent   = ini;
 
-    document.getElementById('pasteBtn').style.display    = isOwner ? '' : 'none';
-    document.getElementById('addBtn').style.display      = isOwner ? '' : 'none';
-    document.getElementById('adminBadge').style.display  = isOwner ? '' : 'none';
-    document.getElementById('clearAllBtn').style.display = isOwner ? '' : 'none';
+    var pasteBtn   = document.getElementById('pasteBtn');
+    var addBtn     = document.getElementById('addBtn');
+    var adminBadge = document.getElementById('adminBadge');
+    var clearBtn   = document.getElementById('clearAllBtn');
 
-    if(isMember && !isOwner){
-      document.getElementById('adminBadge').textContent   = 'TEAM';
-      document.getElementById('adminBadge').style.display = '';
-      document.getElementById('adminBadge').style.background   = 'rgba(79,142,247,.15)';
-      document.getElementById('adminBadge').style.color        = 'var(--accent)';
-      document.getElementById('adminBadge').style.borderColor  = 'rgba(79,142,247,.3)';
+    if(pasteBtn)   pasteBtn.style.display   = isOwner ? '' : 'none';
+    if(addBtn)     addBtn.style.display     = isOwner ? '' : 'none';
+    if(adminBadge) adminBadge.style.display = isOwner ? '' : 'none';
+    if(clearBtn)   clearBtn.style.display   = isOwner ? '' : 'none';
+
+    if(isMember && !isOwner && adminBadge){
+      adminBadge.textContent        = 'TEAM';
+      adminBadge.style.display      = '';
+      adminBadge.style.background   = 'rgba(79,142,247,.15)';
+      adminBadge.style.color        = 'var(--accent)';
+      adminBadge.style.borderColor  = 'rgba(79,142,247,.3)';
     }
 
-    window.userCanComplete = isMember;
+    window.userCanComplete = true; // all authorised users can mark complete
 
     setConn('ok', 'Connected · Twillio Calls Repository · OneDrive');
     await refreshData();
+
   } catch(e){
+    hideLoading();
     setConn('err', 'Connection failed: ' + e.message);
     showToast('Error: ' + e.message, 'error');
-    hideLoading();
   }
 }
 
@@ -1121,11 +1125,4 @@ function today(){
   var y = d.getFullYear();
   var m = String(d.getMonth()+1).padStart(2,'0');
   var day = String(d.getDate()).padStart(2,'0');
-  return y + '-' + m + '-' + day;
-}
-function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-
-window.onload = function(){ init(); };
-</script>
-</body>
-</html>
+  return y + '-' + m + '-' +
