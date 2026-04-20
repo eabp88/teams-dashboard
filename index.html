@@ -5,7 +5,6 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Teams Call Dashboard</title>
-<script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js" crossorigin="anonymous"></script>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <style>
   :root{
@@ -26,6 +25,8 @@
   .ms-btn svg{width:20px;height:20px;flex-shrink:0}
   .login-note{margin-top:16px;font-size:12px;color:var(--muted);line-height:1.6;background:var(--surface2);border-radius:8px;padding:12px}
 
+  #accessDeniedScreen{display:none;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:32px}
+
   #connBar{display:flex;align-items:center;gap:10px;padding:7px 26px;font-size:12px;border-bottom:1px solid var(--border);background:var(--surface);flex-wrap:wrap}
   .conn-dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex-shrink:0}
   .conn-dot.ok{background:var(--green);box-shadow:0 0 6px var(--green)}
@@ -41,7 +42,9 @@
   .header-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
   .user-chip{display:flex;align-items:center;gap:7px;background:var(--surface2);border:1px solid var(--border2);border-radius:20px;padding:4px 12px 4px 6px;font-size:12px}
   .user-av{width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff}
-  .admin-badge{background:rgba(245,197,66,.15);color:var(--yellow);border-radius:4px;padding:1px 6px;font-size:10px;font-weight:700;border:1px solid rgba(245,197,66,.3)}
+  .role-badge{border-radius:4px;padding:1px 6px;font-size:10px;font-weight:700}
+  .role-admin{background:rgba(245,197,66,.15);color:var(--yellow);border:1px solid rgba(245,197,66,.3)}
+  .role-team{background:rgba(79,142,247,.15);color:var(--accent);border:1px solid rgba(79,142,247,.3)}
 
   .btn{padding:7px 14px;border-radius:7px;font-size:13px;font-weight:500;cursor:pointer;border:none;font-family:var(--sans);transition:all .15s;white-space:nowrap}
   .btn-ghost{background:transparent;border:1px solid var(--border2);color:var(--muted)}
@@ -54,7 +57,6 @@
   .btn-sm{padding:5px 10px;font-size:12px}
 
   main{padding:20px 26px}
-
   #importZone{background:var(--surface);border:1.5px dashed var(--border2);border-radius:14px;padding:40px;text-align:center;margin-bottom:20px}
   #importZone h2{font-size:17px;font-weight:600;margin-bottom:8px}
   #importZone p{color:var(--muted);font-size:13px;margin-bottom:20px;line-height:1.6}
@@ -101,23 +103,18 @@
   .mono-sm{font-family:var(--mono);font-size:11px;color:var(--muted)}
   .sip{font-family:var(--mono);font-size:11px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .dept-badge{background:rgba(79,142,247,.1);color:var(--accent);border-radius:6px;padding:2px 8px;font-size:11px;font-weight:500;white-space:nowrap}
-  .icon-btn{width:27px;height:27px;border-radius:6px;border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .1s;font-size:12px}
-  .icon-btn:hover{border-color:var(--red);color:var(--red)}
-  /* Complete button */
-  .complete-btn{height:27px;padding:0 10px;border-radius:6px;border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;font-size:12px;white-space:nowrap;gap:4px}
+  .complete-btn{height:27px;padding:0 10px;border-radius:6px;border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:all .15s;font-size:12px;white-space:nowrap;gap:4px}
   .complete-btn:hover{border-color:var(--green);color:var(--green)}
   .complete-btn.done{border-color:var(--green);background:rgba(34,199,122,.15);color:var(--green)}
+  .icon-btn{width:27px;height:27px;border-radius:6px;border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:all .1s;font-size:12px}
+  .icon-btn:hover{border-color:var(--red);color:var(--red)}
   .actions-cell{display:flex;align-items:center;gap:6px}
-  /* Completed row styling */
-  tbody tr.row-completed td{opacity:.55}
-  tbody tr.row-completed .agent-name{text-decoration:line-through;color:var(--muted)}
-  .completed-badge{display:inline-flex;align-items:center;gap:4px;background:rgba(34,199,122,.12);color:var(--green);border:1px solid rgba(34,199,122,.3);border-radius:6px;padding:2px 8px;font-size:10px;font-weight:600;white-space:nowrap}
-  .actions-cell{display:flex;align-items:center;gap:5px}
+  .completed-badge{display:inline-flex;align-items:center;gap:4px;background:rgba(34,199,122,.1);color:var(--green);border-radius:6px;padding:2px 8px;font-size:11px;font-weight:500}
   .empty-state{text-align:center;padding:56px 32px;color:var(--muted)}
   .empty-state .icon{font-size:40px;margin-bottom:12px;opacity:.4}
   .empty-state h3{font-size:15px;font-weight:500;margin-bottom:6px;color:var(--text)}
 
-  #loadingOverlay{position:fixed;inset:0;background:rgba(13,15,20,.88);z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
+  #loadingOverlay{position:fixed;inset:0;background:rgba(13,15,20,.88);z-index:500;display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px}
   .spinner{width:34px;height:34px;border:3px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
   #loadingText{font-size:14px;color:var(--muted)}
@@ -169,29 +166,32 @@
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 23 23"><path fill="#f3f3f3" d="M0 0h23v23H0z"/><path fill="#f35325" d="M1 1h10v10H1z"/><path fill="#81bc06" d="M12 1h10v10H12z"/><path fill="#05a6f0" d="M1 12h10v10H1z"/><path fill="#ffba08" d="M12 12h10v10H12z"/></svg>
       Sign in with Microsoft
     </button>
-    <p class="login-note">🔒 Data is stored in the company's shared OneDrive folder.<br>No data is stored on GitHub or any third party.</p>
+    <p class="login-note">Data is stored in the company shared folder. No data is stored on GitHub.</p>
   </div>
 </div>
 
-<!-- ACCESS DENIED SCREEN -->
-<div id="accessDeniedScreen" style="display:none;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:32px">
+<!-- ACCESS DENIED -->
+<div id="accessDeniedScreen">
   <div style="background:var(--surface);border:1px solid var(--red);border-radius:20px;padding:48px 40px;text-align:center;max-width:440px;width:100%">
     <div style="width:56px;height:56px;background:rgba(242,87,87,.15);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 20px">🚫</div>
     <h1 style="font-size:20px;font-weight:700;margin-bottom:8px;color:var(--red)">Access Denied</h1>
     <p style="color:var(--muted);font-size:14px;margin-bottom:16px;line-height:1.6">
-      Your account (<strong id="accessDeniedEmail" style="color:var(--text)"></strong>) does not have permission to access the Teams Call Dashboard.
+      Your account (<strong id="accessDeniedEmail" style="color:var(--text)"></strong>) does not have permission to access this dashboard.
     </p>
     <p style="color:var(--muted);font-size:13px;margin-bottom:28px;line-height:1.6">
       Please contact <strong style="color:var(--text)">Erick Bonilla</strong> to request access.
     </p>
-    <button onclick="requestAccess()" style="display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:#fff;padding:11px 22px;border-radius:9px;font-size:13px;font-weight:600;text-decoration:none;margin-bottom:12px;border:none;cursor:pointer">
-      ✉️ Request Access
+    <button onclick="requestAccess()" style="display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:#fff;padding:11px 22px;border-radius:9px;font-size:13px;font-weight:600;border:none;cursor:pointer;margin-bottom:12px">
+      Request Access
     </button>
     <div style="margin-top:12px">
-      <a href="https://eabp88.github.io/teams-dashboard" style="font-size:12px;color:var(--muted);text-decoration:underline">← Try a different account</a>
+      <button onclick="signOut()" style="font-size:12px;color:var(--muted);background:none;border:none;cursor:pointer;text-decoration:underline">Sign out and try a different account</button>
     </div>
   </div>
 </div>
+
+<!-- APP -->
+<div id="app" style="display:none">
   <div id="connBar">
     <div class="conn-dot" id="connDot"></div>
     <span id="connText" style="color:var(--muted)">Connecting…</span>
@@ -199,7 +199,6 @@
       <button class="btn btn-ghost btn-sm" onclick="signOut()">Sign out</button>
     </span>
   </div>
-
   <header>
     <div class="logo">
       <div class="logo-icon">📞</div>
@@ -209,7 +208,7 @@
       <div class="user-chip">
         <div class="user-av" id="userAv">?</div>
         <span id="userName">…</span>
-        <span class="admin-badge" id="adminBadge" style="display:none">ADMIN</span>
+        <span class="role-badge" id="roleBadge" style="display:none"></span>
       </div>
       <button class="btn btn-ghost btn-sm" onclick="refreshData()">↻ Refresh</button>
       <button class="btn btn-ghost" id="pasteBtn" onclick="openModal('pasteModal')" style="display:none">📋 Paste from Twilio</button>
@@ -220,10 +219,10 @@
   <main>
     <div id="importZone">
       <h2>📋 No records yet</h2>
-      <p>Paste data from Twilio or add entries manually.<br>All records are saved to the shared <strong>Twillio Calls Repository</strong> folder and instantly visible to all colleagues.</p>
+      <p>Paste data from Twilio or add entries manually.<br>All records are saved to the shared <strong>Twillio Calls Repository</strong> folder.</p>
       <div class="import-opts">
-        <button class="btn btn-primary" onclick="openModal('pasteModal')">📋 Paste from Twilio</button>
-        <button class="btn btn-ghost" onclick="openModal('manualModal')">✏️ Add Manually</button>
+        <button class="btn btn-primary" id="importZonePasteBtn" onclick="openModal('pasteModal')" style="display:none">📋 Paste from Twilio</button>
+        <button class="btn btn-ghost" id="importZoneAddBtn" onclick="openModal('manualModal')" style="display:none">✏️ Add Manually</button>
       </div>
     </div>
 
@@ -232,7 +231,6 @@
       <div class="stat-card c-red">  <div class="lbl">Busy / On Call</div><div class="val" id="statBusy">0</div></div>
       <div class="stat-card c-green"><div class="lbl">Ready</div>         <div class="val" id="statReady">0</div></div>
       <div class="stat-card c-yellow"><div class="lbl">On Break</div>     <div class="val" id="statBreak">0</div></div>
-      <div class="stat-card c-green"><div class="lbl">✅ Completed</div>  <div class="val" id="statCompleted">0</div></div>
     </div>
 
     <div id="infoBar">
@@ -255,12 +253,10 @@
         <option value="">All Statuses</option><option value="busy">Busy Calls</option>
         <option value="ready">Ready</option><option value="break">Break</option><option value="offline">Offline</option>
       </select>
-      <select class="fsel" id="completedFilter" onchange="filterTable()">
-        <option value="">All Records</option>
-        <option value="pending">⏳ Pending</option>
-        <option value="completed">✅ Completed</option>
-      </select>
       <select class="fsel" id="deptFilter" onchange="filterTable()"><option value="">All Departments</option></select>
+      <select class="fsel" id="completedFilter" onchange="filterTable()">
+        <option value="">All Records</option><option value="pending">Pending only</option><option value="done">Completed only</option>
+      </select>
       <input type="date" class="fsel" id="dateFilter" onchange="filterTable()"/>
       <button class="btn btn-ghost btn-sm" onclick="clearFilters()">✕ Clear</button>
     </div>
@@ -305,7 +301,7 @@
       <div class="step"><div class="step-num">4</div><div class="step-lbl">Press<br><kbd>Ctrl+V</kbd></div></div>
       <div class="step"><div class="step-num">5</div><div class="step-lbl">Click<br>Import</div></div>
     </div>
-    <textarea id="pasteInput" placeholder="▶ Click here, then press Ctrl+V to paste your Twilio data." oninput="onPasteInput()" onpaste="scheduleParse()"></textarea>
+    <textarea id="pasteInput" placeholder="Click here then press Ctrl+V to paste your Twilio data." oninput="onPasteInput()" onpaste="scheduleParse()"></textarea>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:9px">
       <label style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;cursor:pointer">
         <input type="checkbox" id="showDebug" onchange="toggleDebug()" style="accent-color:var(--accent)"/> Show raw pasted text
@@ -326,13 +322,13 @@
 <div class="modal-backdrop" id="manualModal">
   <div class="modal">
     <h3>✏️ Add Entry Manually</h3>
-    <p>Fill in the agent call record. Saved to OneDrive and instantly visible to all colleagues.</p>
+    <p>Fill in the agent call record. Saved to OneDrive and visible to all colleagues.</p>
     <div class="form-grid">
       <div class="form-field"><label>Agent Name *</label><input id="m_name" type="text" placeholder="Rodrigo Alejandro H."/></div>
       <div class="form-field"><label>Status *</label>
         <select id="m_status"><option>Busy Calls</option><option>Ready</option><option>Break</option><option>Offline</option></select></div>
       <div class="form-field"><label>Status Duration</label><input id="m_statusDur" type="text" placeholder="10:23"/></div>
-      <div class="form-field"><label>Call Number (SIP)</label><input id="m_callNum" type="text" placeholder="sip:+17025638631@twilio"/></div>
+      <div class="form-field"><label>Call Number (SIP)</label><input id="m_callNum" type="text" placeholder="sip:+17025638631"/></div>
       <div class="form-field"><label>Call Duration</label><input id="m_callDur" type="text" placeholder="10m"/></div>
       <div class="form-field"><label>Call Channel</label><input id="m_channel" type="text" placeholder="greyhound_fares"/></div>
       <div class="form-field"><label>Date *</label><input id="m_date" type="date"/></div>
@@ -347,6 +343,7 @@
   </div>
 </div>
 
+<!-- COMPLETE MODAL -->
 <div class="modal-backdrop" id="completeModal">
   <div class="modal" style="max-width:420px">
     <h3>✅ Mark as Completed</h3>
@@ -362,144 +359,164 @@
   </div>
 </div>
 
-<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+<div id="toast"></div>
+
+<script>
 // ══════════════════════════════════════════════════
 // CONFIG
 // ══════════════════════════════════════════════════
-var CLIENT_ID    = '198a4127-4ad2-4d32-a0cb-beb6d48b3bb0';
-var TENANT_ID    = '88d97709-f0ea-4a21-86f3-f603d653e7c9';
-// Owner's email address — all data stored in their OneDrive
-// Owner email built in parts so Cloudflare cannot detect and obfuscate it
-var OWNER_EMAIL = (function(){ return 'erick.bonilla' + '@' + 'thefunctionary.com'; })();
-var OWNER_ID     = '423b73fc-2cdd-48da-a657-dba86e064f62'; // used for admin check only
-var FOLDER_NAME  = 'Twillio Calls Repository';
-var FILE_NAME    = 'teamcalldata.json';
-// Files.ReadWrite does NOT require admin consent
-var SCOPES       = ['Files.ReadWrite', 'User.Read'];
+var CLIENT_ID   = '198a4127-4ad2-4d32-a0cb-beb6d48b3bb0';
+var TENANT_ID   = '88d97709-f0ea-4a21-86f3-f603d653e7c9';
+var REDIRECT    = 'https://eabp88.github.io/teams-dashboard/';
+var SCOPES      = 'Files.ReadWrite User.Read offline_access';
+var FOLDER_NAME = 'Twillio Calls Repository';
+var FILE_NAME   = 'teamcalldata.json';
+var SHARE_URL   = 'https://thefunctionary-my.sharepoint.com/:u:/p/erick_bonilla/IQC2qUN4N8YpSajpvgeqr3X9ARwWC-QbEPyKh2rhLpkHqQ0?e=95DIQJ';
+
+// Emails split in JS so Cloudflare cannot detect and obfuscate them
+var D           = 'thefunctionary.com';
+var OWNER_EMAILS = ['erick.bonilla' + '@' + D];
+var TEAM_EMAILS  = [
+  'Andres.Staben' + '@' + D,
+  'jose.amaya'    + '@' + D,
+  // Add more team members below:
+  // 'firstname.lastname' + '@' + D,
+];
 
 // ══════════════════════════════════════════════════
-// STATE
+// OAUTH2 PKCE — no MSAL, no eval(), CSP-safe
 // ══════════════════════════════════════════════════
-var msalApp    = null;
-var account    = null;
-var data       = [];
-var isAdmin    = false;
-var sortKey    = '';
-var sortDir    = 1;
-var parsedRows = [];
-var toastTimer = null;
-var parseTimer = null;
-
-// ══════════════════════════════════════════════════
-// ROLES — edit these lists to control access
-// ══════════════════════════════════════════════════
-// OWNER: can paste data, add, delete, clear all
-var OWNER_EMAILS = [
-  'erick.bonilla' + '@' + 'thefunctionary.com'
-];
-// TEAM MEMBERS: can mark calls as complete, view data
-// Add colleague emails here — one per line
-var TEAM_EMAILS = [
-  // Add team member emails below, e.g:
-  // 'firstname.lastname' + '@' + 'thefunctionary.com',
-];
-// Everyone else who signs in can only VIEW (read-only)
-function initMsal(){
-  if(typeof msal === 'undefined'){
-    showToast('Microsoft login library failed to load. Please refresh.','error');
-    return false;
-  }
-  msalApp = new msal.PublicClientApplication({
-    auth:{
-      clientId:    CLIENT_ID,
-      authority:   'https://login.microsoftonline.com/' + TENANT_ID,
-      redirectUri: 'https://eabp88.github.io/teams-dashboard/',
-    },
-    cache:{ cacheLocation:'localStorage', storeAuthStateInCookie:true }
-  });
-  return true;
+function b64url(buf){
+  return btoa(String.fromCharCode.apply(null, new Uint8Array(buf)))
+    .replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
 }
-
-// ══════════════════════════════════════════════════
-// AUTH
-// ══════════════════════════════════════════════════
-var appAborted = false;
-
-async function init(){
-  appAborted = false;
-
-  // Show login screen IMMEDIATELY — never show loading spinner on first load
-  hideLoading();
-  showEl('loginScreen');
-
-  if(!initMsal()) return;
-
-  // Silently check if already logged in (no spinner, no blocking)
-  try{
-    var redirectResult = await Promise.race([
-      msalApp.handleRedirectPromise(),
-      new Promise(function(resolve){ setTimeout(resolve, 5000, null); }) // 5s max
-    ]);
-
-    if(appAborted) return;
-
-    // If redirect just completed, account will be in result
-    if(redirectResult && redirectResult.account){
-      account = redirectResult.account;
-      hideEl('loginScreen');
-      await startApp();
-      return;
-    }
-
-    // Check for existing cached session
-    var accounts = msalApp.getAllAccounts();
-    if(accounts.length > 0){
-      account = accounts[0];
-      hideEl('loginScreen');
-      await startApp();
-    }
-    // Otherwise stay on login screen — user clicks Sign In
-  } catch(e){
-    console.warn('MSAL init error:', e.message);
-    // Stay on login screen
-  }
+async function sha256(plain){
+  var enc = new TextEncoder().encode(plain);
+  return crypto.subtle.digest('SHA-256', enc);
+}
+function randStr(len){
+  var arr = new Uint8Array(len);
+  crypto.getRandomValues(arr);
+  return b64url(arr);
 }
 
 async function signIn(){
+  var verifier  = randStr(64);
+  var challenge = b64url(await sha256(verifier));
+  var state     = randStr(16);
+
+  sessionStorage.setItem('pkce_verifier', verifier);
+  sessionStorage.setItem('pkce_state',    state);
+
+  var base  = 'https://login.microsoftonline.com/' + TENANT_ID + '/oauth2/v2.0/authorize';
+  var params = new URLSearchParams({
+    client_id:             CLIENT_ID,
+    response_type:         'code',
+    redirect_uri:          REDIRECT,
+    scope:                 SCOPES,
+    state:                 state,
+    code_challenge:        challenge,
+    code_challenge_method: 'S256',
+    prompt:                'select_account'
+  });
+  window.location.href = base + '?' + params.toString();
+}
+
+async function handleCallback(code, state){
+  var savedState   = sessionStorage.getItem('pkce_state');
+  var verifier     = sessionStorage.getItem('pkce_verifier');
+  sessionStorage.removeItem('pkce_state');
+  sessionStorage.removeItem('pkce_verifier');
+
+  if(state !== savedState){ showLoginScreen(); return; }
+
+  showLoading('Signing in…');
   try{
-    showLoading('Redirecting to Microsoft sign-in…');
-    await msalApp.loginRedirect({ scopes: SCOPES });
+    var res  = await fetch(
+      'https://login.microsoftonline.com/' + TENANT_ID + '/oauth2/v2.0/token',
+      {
+        method: 'POST',
+        headers:{ 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          client_id:     CLIENT_ID,
+          grant_type:    'authorization_code',
+          code:          code,
+          redirect_uri:  REDIRECT,
+          code_verifier: verifier,
+          scope:         SCOPES
+        }).toString()
+      }
+    );
+    var json = await res.json();
+    if(json.error){ throw new Error(json.error_description || json.error); }
+
+    saveTokens(json);
+    // Clean URL
+    history.replaceState({}, '', REDIRECT);
+    await startApp();
   } catch(e){
     hideLoading();
+    showLoginScreen();
     showToast('Sign in failed: ' + e.message, 'error');
   }
 }
 
-function signOut(){
-  data = [];
-  msalApp.logoutRedirect({ account: account });
+function saveTokens(json){
+  var expiry = Date.now() + (json.expires_in - 60) * 1000;
+  localStorage.setItem('tcd_access_token',  json.access_token);
+  localStorage.setItem('tcd_refresh_token', json.refresh_token || '');
+  localStorage.setItem('tcd_token_expiry',  String(expiry));
 }
 
 async function getToken(){
+  var token  = localStorage.getItem('tcd_access_token');
+  var expiry = parseInt(localStorage.getItem('tcd_token_expiry') || '0');
+
+  if(token && Date.now() < expiry) return token;
+
+  // Try refresh
+  var refresh = localStorage.getItem('tcd_refresh_token');
+  if(!refresh){ signOut(); return null; }
+
   try{
-    var res = await msalApp.acquireTokenSilent({ scopes: SCOPES, account: account });
-    return res.accessToken;
+    var res  = await fetch(
+      'https://login.microsoftonline.com/' + TENANT_ID + '/oauth2/v2.0/token',
+      {
+        method: 'POST',
+        headers:{ 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          client_id:     CLIENT_ID,
+          grant_type:    'refresh_token',
+          refresh_token: refresh,
+          scope:         SCOPES
+        }).toString()
+      }
+    );
+    var json = await res.json();
+    if(json.error){ throw new Error(json.error); }
+    saveTokens(json);
+    return json.access_token;
   } catch(e){
-    await msalApp.acquireTokenRedirect({ scopes: SCOPES });
-    return null;
+    signOut(); return null;
   }
 }
 
+function signOut(){
+  ['tcd_access_token','tcd_refresh_token','tcd_token_expiry'].forEach(function(k){ localStorage.removeItem(k); });
+  data = [];
+  hideEl('app'); hideEl('accessDeniedScreen');
+  showLoginScreen();
+}
+
+// ══════════════════════════════════════════════════
+// GRAPH API
+// ══════════════════════════════════════════════════
 async function graphFetch(method, path, body){
   var token = await getToken();
   if(!token) return null;
   var opts = {
     method: method,
-    headers:{
-      'Authorization': 'Bearer ' + token,
-      'Content-Type':  'application/json',
-      'Accept':        'application/json'
-    }
+    headers:{ 'Authorization':'Bearer '+token, 'Content-Type':'application/json', 'Accept':'application/json' }
   };
   if(body !== undefined && body !== null) opts.body = JSON.stringify(body);
   var res = await fetch('https://graph.microsoft.com/v1.0' + path, opts);
@@ -512,114 +529,163 @@ async function graphFetch(method, path, body){
 }
 
 // ══════════════════════════════════════════════════
-// START
+// STATE
+// ══════════════════════════════════════════════════
+var data          = [];
+var isAdmin       = false;
+var userCanComplete = false;
+var currentUser   = '';
+var sortKey       = '';
+var sortDir       = 1;
+var parsedRows    = [];
+var toastTimer    = null;
+var parseTimer    = null;
+var pendingCompleteId = null;
+
+// ══════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════
+function init(){
+  // Check if returning from OAuth redirect
+  var params = new URLSearchParams(window.location.search);
+  var code   = params.get('code');
+  var state  = params.get('state');
+
+  if(code && state){
+    handleCallback(code, state);
+    return;
+  }
+
+  // Check for existing token
+  var token  = localStorage.getItem('tcd_access_token');
+  var expiry = parseInt(localStorage.getItem('tcd_token_expiry') || '0');
+
+  if(token && Date.now() < expiry){
+    startApp();
+  } else {
+    showLoginScreen();
+  }
+}
+
+function showLoginScreen(){
+  hideLoading();
+  hideEl('app'); hideEl('accessDeniedScreen');
+  showEl('loginScreen');
+}
+
+// ══════════════════════════════════════════════════
+// START APP
 // ══════════════════════════════════════════════════
 async function startApp(){
   showLoading('Checking access…');
   try{
-    var me    = await graphFetch('GET', '/me?$select=displayName,userPrincipalName,id');
+    var me    = await graphFetch('GET', '/me?$select=displayName,userPrincipalName');
+    if(!me){ signOut(); return; }
+
     var name  = me.displayName || me.userPrincipalName || 'User';
     var email = (me.userPrincipalName || '').toLowerCase();
-    // ── CHECK ACCESS FIRST before showing anything ───
-    var isOwner  = OWNER_EMAILS.map(function(e){ return e.toLowerCase(); }).indexOf(email) !== -1;
-    var isMember = isOwner || TEAM_EMAILS.map(function(e){ return e.toLowerCase(); }).indexOf(email) !== -1;
+    currentUser = name;
 
+    var ownerList  = OWNER_EMAILS.map(function(e){ return e.toLowerCase(); });
+    var teamList   = TEAM_EMAILS.map(function(e){ return e.toLowerCase(); });
+    var isOwner    = ownerList.indexOf(email) !== -1;
+    var isMember   = isOwner || teamList.indexOf(email) !== -1;
+
+    // Block anyone not on the lists
     if(!isMember){
       hideLoading();
-      // Show access denied screen — never show the app
-      document.getElementById('accessDeniedEmail').textContent = email;
+      var el = document.getElementById('accessDeniedEmail');
+      if(el) el.textContent = email;
+      hideEl('loginScreen');
       showEl('accessDeniedScreen');
       return;
     }
 
-    // ── AUTHORISED — now show the app ────────────────
-    hideEl('loginScreen');
-    showEl('app');
-    isAdmin = isOwner;
+    isAdmin        = isOwner;
+    userCanComplete = true; // all authorised users can mark complete
 
+    // Set user display
     var ini = name.split(' ').slice(0,2).map(function(w){ return w[0]||''; }).join('').toUpperCase();
-    document.getElementById('userName').textContent = name;
     document.getElementById('userAv').textContent   = ini;
+    document.getElementById('userName').textContent = name;
 
-    var pasteBtn   = document.getElementById('pasteBtn');
-    var addBtn     = document.getElementById('addBtn');
-    var adminBadge = document.getElementById('adminBadge');
-    var clearBtn   = document.getElementById('clearAllBtn');
-
-    if(pasteBtn)   pasteBtn.style.display   = isOwner ? '' : 'none';
-    if(addBtn)     addBtn.style.display     = isOwner ? '' : 'none';
-    if(adminBadge) adminBadge.style.display = isOwner ? '' : 'none';
-    if(clearBtn)   clearBtn.style.display   = isOwner ? '' : 'none';
-
-    if(isMember && !isOwner && adminBadge){
-      adminBadge.textContent        = 'TEAM';
-      adminBadge.style.display      = '';
-      adminBadge.style.background   = 'rgba(79,142,247,.15)';
-      adminBadge.style.color        = 'var(--accent)';
-      adminBadge.style.borderColor  = 'rgba(79,142,247,.3)';
+    var badge = document.getElementById('roleBadge');
+    if(isOwner){
+      badge.textContent  = 'ADMIN';
+      badge.className    = 'role-badge role-admin';
+      badge.style.display = '';
+    } else {
+      badge.textContent  = 'TEAM';
+      badge.className    = 'role-badge role-team';
+      badge.style.display = '';
     }
 
-    window.userCanComplete = true; // all authorised users can mark complete
+    // Show/hide owner-only buttons
+    ['pasteBtn','addBtn','importZonePasteBtn','importZoneAddBtn'].forEach(function(id){
+      var el = document.getElementById(id);
+      if(el) el.style.display = isOwner ? '' : 'none';
+    });
+    var clearBtn = document.getElementById('clearAllBtn');
+    if(clearBtn) clearBtn.style.display = isOwner ? '' : 'none';
 
+    hideEl('loginScreen');
+    showEl('app');
     setConn('ok', 'Connected · Twillio Calls Repository · OneDrive');
     await refreshData();
-
   } catch(e){
     hideLoading();
-    setConn('err', 'Connection failed: ' + e.message);
     showToast('Error: ' + e.message, 'error');
+    signOut();
   }
 }
 
 // ══════════════════════════════════════════════════
 // FILE STORAGE
-// Read/write a JSON file in the OWNER's OneDrive
-// using /users/{OWNER_ID}/drive — accessible to
-// anyone who has been shared the file/folder
 // ══════════════════════════════════════════════════
-var BASE_PATH = '/users/' + encodeURIComponent(OWNER_EMAIL) + '/drive/root:/' +
-  encodeURIComponent(FOLDER_NAME) + '/' + FILE_NAME;
-
-// Share URL for the teamcalldata.json file (shared as "Anyone with link can view")
-var SHARE_URL = 'https://thefunctionary-my.sharepoint.com/:u:/p/erick_bonilla/IQC2qUN4N8YpSajpvgeqr3X9ARwWC-QbEPyKh2rhLpkHqQ0?e=95DIQJ';
-
-function encodeShareUrl(url){
-  // Graph API requires base64url encoding of the share URL prefixed with u!
-  var b64 = btoa(url).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_');
-  return 'u!' + b64;
-}
+var OWNER_EMAIL = 'erick.bonilla' + '@' + D;
+var BASE = '/users/' + encodeURIComponent(OWNER_EMAIL) + '/drive/root:/';
 
 async function readFile(){
   try{
     var token = await getToken();
     if(!token) return [];
 
-    // 10 second timeout on the fetch
-    var controller = new AbortController();
+    // Use Graph shares API with user's own token
+    var encoded = btoa(SHARE_URL).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_');
+    var shareId = 'u!' + encoded;
+
+    var controller   = new AbortController();
     var fetchTimeout = setTimeout(function(){ controller.abort(); }, 10000);
 
-    var shareId = encodeShareUrl(SHARE_URL);
     var res = await fetch(
       'https://graph.microsoft.com/v1.0/shares/' + shareId + '/driveItem/content',
-      { headers:{ 'Authorization': 'Bearer ' + token }, signal: controller.signal }
+      { headers:{ 'Authorization':'Bearer '+token }, signal: controller.signal }
     );
     clearTimeout(fetchTimeout);
 
     if(res.status === 404) return [];
     if(!res.ok){
-      var txt = await res.text().catch(function(){ return ''; });
-      throw new Error('Read failed ' + res.status + ': ' + txt.slice(0,150));
+      // Fallback: try direct path with owner email
+      var res2 = await fetch(
+        'https://graph.microsoft.com/v1.0' + BASE + encodeURIComponent(FOLDER_NAME) + '/' + FILE_NAME + ':/content',
+        { headers:{ 'Authorization':'Bearer '+token } }
+      );
+      if(!res2.ok) return [];
+      var t2 = await res2.text();
+      if(!t2 || t2.trim()==='') return [];
+      var j2 = JSON.parse(t2);
+      return Array.isArray(j2) ? j2 : [];
     }
 
     var text = await res.text();
-    if(!text || text.trim() === '') return [];
+    if(!text || text.trim()==='') return [];
     var json = JSON.parse(text);
     return Array.isArray(json) ? json : [];
 
   } catch(e){
-    console.error('readFile error:', e.message);
-    if(e.message.indexOf('404') !== -1 || e.message.indexOf('itemNotFound') !== -1) return [];
-    if(e.name === 'AbortError') return []; // timed out — return empty gracefully
+    if(e.name==='AbortError') return [];
+    if(e.message.indexOf('404')!==-1 || e.message.indexOf('itemNotFound')!==-1) return [];
+    console.error('readFile:', e.message);
     throw e;
   }
 }
@@ -627,64 +693,55 @@ async function readFile(){
 async function writeFile(records){
   var token = await getToken();
   if(!token) return;
-  var content = JSON.stringify(records, null, 2);
   var res = await fetch(
-    'https://graph.microsoft.com/v1.0/users/' + encodeURIComponent(OWNER_EMAIL) + '/drive/root:/' + encodeURIComponent(FOLDER_NAME) + '/' + FILE_NAME + ':/content',
+    'https://graph.microsoft.com/v1.0' + BASE + encodeURIComponent(FOLDER_NAME) + '/' + FILE_NAME + ':/content',
     {
       method: 'PUT',
-      headers:{
-        'Authorization': 'Bearer ' + token,
-        'Content-Type':  'application/json'
-      },
-      body: content
+      headers:{ 'Authorization':'Bearer '+token, 'Content-Type':'application/json' },
+      body: JSON.stringify(records, null, 2)
     }
   );
   if(!res.ok){
     var txt = await res.text().catch(function(){ return ''; });
     throw new Error('Write failed ' + res.status + ': ' + txt.slice(0,200));
   }
-  return res.json();
 }
 
-// ══════════════════════════════════════════════════
-// DATA
-// ══════════════════════════════════════════════════
 async function refreshData(){
-  showLoading('Loading records from OneDrive…');
+  showLoading('Loading records…');
   try{
     data = await readFile();
     document.getElementById('infoTime').textContent  = new Date().toLocaleTimeString();
     document.getElementById('infoCount').textContent = data.length;
     renderAll();
   } catch(e){
-    showToast('Could not load data: ' + e.message, 'error');
-    setConn('err', 'Read failed: ' + e.message);
+    showToast('Could not load: ' + e.message, 'error');
+    setConn('err', 'Read failed');
   } finally {
     hideLoading();
   }
 }
 
-async function saveData(){
-  await writeFile(data);
-}
+async function saveData(){ await writeFile(data); }
 
+// ══════════════════════════════════════════════════
+// CRUD
+// ══════════════════════════════════════════════════
 async function importParsed(){
   if(!parsedRows.length) return;
-  // Capture rows BEFORE closing modal (closeModal resets parsedRows via clearPaste)
-  var rowsToSave = parsedRows.slice();
-  var count = rowsToSave.length;
+  var rows  = parsedRows.slice();
+  var count = rows.length;
   closeModal('pasteModal');
-  showLoading('Saving ' + count + ' records to OneDrive…');
+  showLoading('Saving ' + count + ' records…');
   try{
-    rowsToSave.forEach(function(r){
+    rows.forEach(function(r){
       r.id      = Date.now() + Math.random();
-      r.addedBy = account.name || account.username || '';
+      r.addedBy = currentUser;
     });
-    data = data.concat(rowsToSave);
+    data = data.concat(rows);
     await saveData();
-    document.getElementById('infoCount').textContent = data.length;
     renderAll();
-    showToast('✓ ' + count + ' records saved to OneDrive.', 'success');
+    showToast('✓ ' + count + ' records saved.', 'success');
   } catch(e){
     showToast('Save failed: ' + e.message, 'error');
   } finally {
@@ -695,11 +752,10 @@ async function importParsed(){
 async function addManualEntry(){
   var name = document.getElementById('m_name').value.trim();
   if(!name){ showToast('Agent name is required.', 'error'); return; }
-  showLoading('Saving to OneDrive…');
+  showLoading('Saving…');
   try{
     data.push({
-      id:             Date.now() + Math.random(),
-      name:           name,
+      id: Date.now()+Math.random(), name: name,
       status:         document.getElementById('m_status').value,
       statusDuration: document.getElementById('m_statusDur').value.trim(),
       callNumber:     document.getElementById('m_callNum').value.trim(),
@@ -709,121 +765,80 @@ async function addManualEntry(){
       agentSID:       document.getElementById('m_sid').value.trim(),
       provider:       document.getElementById('m_provider').value.trim() || 'The Functionary',
       department:     document.getElementById('m_dept').value.trim() || 'Greyhound Telesales',
-      addedBy:        account.name || account.username || '',
+      addedBy:        currentUser,
+      completed:      false, completedBy:'', completedAt:''
     });
     await saveData();
     ['m_name','m_statusDur','m_callNum','m_callDur','m_channel','m_sid','m_provider','m_dept']
-      .forEach(function(id){ document.getElementById(id).value = ''; });
+      .forEach(function(id){ document.getElementById(id).value=''; });
     closeModal('manualModal');
-    document.getElementById('infoCount').textContent = data.length;
     renderAll();
-    showToast('✓ Entry saved to OneDrive.', 'success');
-  } catch(e){
-    showToast('Failed: ' + e.message, 'error');
-  } finally {
-    hideLoading();
-  }
+    showToast('✓ Entry saved.', 'success');
+  } catch(e){ showToast('Failed: '+e.message,'error'); }
+  finally { hideLoading(); }
 }
-
-async function deleteEntry(id){
-  if(!isAdmin){ showToast('Only admins can delete records.', 'error'); return; }
-  if(!confirm('Delete this record?')) return;
-  showLoading('Deleting…');
-  try{
-    data = data.filter(function(r){ return r.id !== id; });
-    await saveData();
-    renderAll();
-    showToast('Record deleted.', 'success');
-  } catch(e){
-    showToast('Delete failed: ' + e.message, 'error');
-  } finally {
-    hideLoading();
-  }
-}
-
-var pendingCompleteId = null;
 
 function toggleComplete(id){
-  // Find the record
-  var rec = data.find(function(r){ return r.id === id; });
+  var rec = data.find(function(r){ return r.id===id; });
   if(!rec) return;
-
-  if(rec.completed){
-    // Already done — unmark immediately without asking
-    unmarkComplete(id);
-  } else {
-    // Show modal to enter who completed it
+  if(rec.completed){ unmarkComplete(id); }
+  else {
     pendingCompleteId = id;
-    // Pre-fill with logged-in user's name
-    document.getElementById('completedByInput').value = account.name || account.username || '';
+    document.getElementById('completedByInput').value = currentUser;
     openModal('completeModal');
-    setTimeout(function(){
-      var inp = document.getElementById('completedByInput');
-      inp.focus(); inp.select();
-    }, 150);
+    setTimeout(function(){ var i=document.getElementById('completedByInput'); i.focus(); i.select(); },150);
   }
 }
 
 async function confirmComplete(){
   var name = document.getElementById('completedByInput').value.trim();
-  if(!name){ showToast('Please enter a name.', 'error'); return; }
+  if(!name){ showToast('Please enter a name.','error'); return; }
   closeModal('completeModal');
   showLoading('Saving…');
   try{
     data = data.map(function(r){
-      if(r.id === pendingCompleteId){
-        r.completed   = true;
-        r.completedBy = name;
-        r.completedAt = today();
+      if(r.id===pendingCompleteId){
+        r.completed=true; r.completedBy=name; r.completedAt=today();
       }
       return r;
     });
-    await saveData();
-    renderAll();
-    showToast('✅ Marked as completed by ' + name + '.', 'success');
-  } catch(e){
-    showToast('Update failed: ' + e.message, 'error');
-  } finally {
-    hideLoading();
-    pendingCompleteId = null;
-  }
+    await saveData(); renderAll();
+    showToast('✅ Marked as completed by '+name+'.','success');
+  } catch(e){ showToast('Failed: '+e.message,'error'); }
+  finally { hideLoading(); pendingCompleteId=null; }
 }
 
 async function unmarkComplete(id){
   showLoading('Updating…');
   try{
-    data = data.map(function(r){
-      if(r.id === id){
-        r.completed   = false;
-        r.completedBy = '';
-        r.completedAt = '';
-      }
+    data=data.map(function(r){
+      if(r.id===id){ r.completed=false; r.completedBy=''; r.completedAt=''; }
       return r;
     });
-    await saveData();
-    renderAll();
-    showToast('Marked as pending.', 'success');
-  } catch(e){
-    showToast('Update failed: ' + e.message, 'error');
-  } finally {
-    hideLoading();
-  }
+    await saveData(); renderAll(); showToast('Marked as pending.','success');
+  } catch(e){ showToast('Failed: '+e.message,'error'); }
+  finally { hideLoading(); }
+}
+
+async function deleteEntry(id){
+  if(!isAdmin){ showToast('Only admins can delete.','error'); return; }
+  if(!confirm('Delete this record?')) return;
+  showLoading('Deleting…');
+  try{
+    data=data.filter(function(r){ return r.id!==id; });
+    await saveData(); renderAll(); showToast('Deleted.','success');
+  } catch(e){ showToast('Delete failed: '+e.message,'error'); }
+  finally { hideLoading(); }
 }
 
 async function clearAllData(){
-  if(!isAdmin){ showToast('Only admins can clear all data.', 'error'); return; }
+  if(!isAdmin){ showToast('Only admins can clear all data.','error'); return; }
   if(!confirm('Delete ALL records? This cannot be undone.')) return;
-  showLoading('Clearing all data…');
+  showLoading('Clearing…');
   try{
-    data = [];
-    await saveData();
-    renderAll();
-    showToast('All records deleted.', 'success');
-  } catch(e){
-    showToast('Error: ' + e.message, 'error');
-  } finally {
-    hideLoading();
-  }
+    data=[]; await saveData(); renderAll(); showToast('All records deleted.','success');
+  } catch(e){ showToast('Error: '+e.message,'error'); }
+  finally { hideLoading(); }
 }
 
 // ══════════════════════════════════════════════════
@@ -835,125 +850,99 @@ var CALLDUR_RE = /^\d+\s*(m|min|s|sec)$/i;
 var SIP_RE     = /^sip:/i;
 var SID_RE     = /^003[A-Za-z0-9]{10,}/;
 
-function scheduleParse(){ clearTimeout(parseTimer); parseTimer = setTimeout(onPasteInput, 80); }
-
+function scheduleParse(){ clearTimeout(parseTimer); parseTimer=setTimeout(onPasteInput,80); }
 function onPasteInput(){
-  var ta  = document.getElementById('pasteInput');
-  var raw = ta.value;
-  document.getElementById('rawDebug').textContent = raw;
-  ta.classList.toggle('has-content', raw.trim().length > 0);
-  if(!raw.trim()){ setPSt('',''); hidePreview(); document.getElementById('importBtn').disabled = true; return; }
+  var ta=document.getElementById('pasteInput'), raw=ta.value;
+  document.getElementById('rawDebug').textContent=raw;
+  ta.classList.toggle('has-content',raw.trim().length>0);
+  if(!raw.trim()){ setPSt('',''); hidePreview(); document.getElementById('importBtn').disabled=true; return; }
   parseAndPreview(raw);
 }
-
-function toggleDebug(){
-  document.getElementById('rawDebug').style.display =
-    document.getElementById('showDebug').checked ? 'block' : 'none';
-}
-
+function toggleDebug(){ document.getElementById('rawDebug').style.display=document.getElementById('showDebug').checked?'block':'none'; }
 function clearPaste(){
-  var ta = document.getElementById('pasteInput');
-  ta.value = ''; ta.classList.remove('has-content');
-  document.getElementById('rawDebug').textContent = '';
-  document.getElementById('importBtn').disabled = true;
-  setPSt('',''); hidePreview(); parsedRows = [];
+  var ta=document.getElementById('pasteInput'); ta.value=''; ta.classList.remove('has-content');
+  document.getElementById('rawDebug').textContent='';
+  document.getElementById('importBtn').disabled=true;
+  setPSt('',''); hidePreview(); parsedRows=[];
 }
-function hidePreview(){ document.getElementById('previewWrap').style.display = 'none'; }
+function hidePreview(){ document.getElementById('previewWrap').style.display='none'; }
 
 function parseAndPreview(raw){
-  parsedRows = [];
-  var text = raw.replace(/\r\n/g,'\n').replace(/\r/g,'\n')
-               .replace(/[\u200B-\u200D\uFEFF]/g,'').replace(/\u00A0/g,' ');
-  var lines = text.split('\n').map(function(l){ return l.trim(); }).filter(function(l){ return l; });
-  var tabLines = lines.filter(function(l){ return l.indexOf('\t') !== -1 && !isHeader(l); });
-  if(tabLines.length > 0){
-    var rows = tabLines.map(parseTabRow).filter(Boolean);
-    if(rows.length > 0){ parsedRows = rows; finishParse(); return; }
+  parsedRows=[];
+  var text=raw.replace(/\r\n/g,'\n').replace(/\r/g,'\n').replace(/[\u200B-\u200D\uFEFF]/g,'').replace(/\u00A0/g,' ');
+  var lines=text.split('\n').map(function(l){ return l.trim(); }).filter(function(l){ return l; });
+  var tabLines=lines.filter(function(l){ return l.indexOf('\t')!==-1 && !isHeader(l); });
+  if(tabLines.length>0){
+    var rows=tabLines.map(parseTabRow).filter(Boolean);
+    if(rows.length>0){ parsedRows=rows; finishParse(); return; }
   }
-  var dataLines = lines.filter(function(l){ return !isHeader(l); });
-  var blocks = [], cur = [];
+  var dataLines=lines.filter(function(l){ return !isHeader(l); });
+  var blocks=[],cur=[];
   dataLines.forEach(function(ln){
-    if(isAgentName(ln) && cur.length > 0){ blocks.push(cur); cur = [ln]; }
-    else cur.push(ln);
+    if(isAgentName(ln)&&cur.length>0){ blocks.push(cur); cur=[ln]; } else cur.push(ln);
   });
-  if(cur.length > 0) blocks.push(cur);
-  var rows2 = blocks.map(parseLineBlock).filter(Boolean);
-  if(rows2.length > 0){ parsedRows = rows2; finishParse(); return; }
-  setPSt('err','⚠️ Could not detect records. Enable "Show raw pasted text" to inspect what was copied.');
-  hidePreview(); document.getElementById('importBtn').disabled = true;
+  if(cur.length>0) blocks.push(cur);
+  var rows2=blocks.map(parseLineBlock).filter(Boolean);
+  if(rows2.length>0){ parsedRows=rows2; finishParse(); return; }
+  setPSt('err','Could not detect records. Enable "Show raw pasted text" to inspect what was copied.');
+  hidePreview(); document.getElementById('importBtn').disabled=true;
 }
-
 function finishParse(){
-  setPSt('ok','✓ Detected <strong>' + parsedRows.length + '</strong> record' + (parsedRows.length !== 1 ? 's' : '') + '. Review then click Import.');
-  renderPreview(parsedRows);
-  document.getElementById('importBtn').disabled = false;
+  setPSt('ok','✓ Detected <strong>'+parsedRows.length+'</strong> record'+(parsedRows.length!==1?'s':'')+'. Review then click Import.');
+  renderPreview(parsedRows); document.getElementById('importBtn').disabled=false;
 }
-
 function parseTabRow(line){
-  var cols = line.split('\t').map(function(c){ return c.trim(); });
-  var ap   = (cols[0]||'').split('\n').map(function(p){ return p.trim(); }).filter(Boolean);
-  var name = '', status = '', statusDuration = '';
+  var cols=line.split('\t').map(function(c){ return c.trim(); });
+  var ap=(cols[0]||'').split('\n').map(function(p){ return p.trim(); }).filter(Boolean);
+  var name='',status='',statusDuration='';
   ap.forEach(function(p){
-    if(!name && isAgentName(p)){ name = p; return; }
-    if(!status && STATUS_RE.test(p)){
-      var pi = p.indexOf('|');
-      if(pi !== -1){ status = p.slice(0,pi).trim(); statusDuration = p.slice(pi+1).trim(); }
-      else status = p;
-      return;
-    }
-    if(!statusDuration && STATDUR_RE.test(p)){ statusDuration = p; }
+    if(!name&&isAgentName(p)){ name=p; return; }
+    if(!status&&STATUS_RE.test(p)){ var pi=p.indexOf('|'); if(pi!==-1){ status=p.slice(0,pi).trim(); statusDuration=p.slice(pi+1).trim(); } else status=p; return; }
+    if(!statusDuration&&STATDUR_RE.test(p)) statusDuration=p;
   });
   if(!name) return null;
-  var callNumber = '', callDuration = '', callChannel = '';
+  var callNumber='',callDuration='',callChannel='';
   (cols[1]||'').split('\n').map(function(x){ return x.trim(); }).filter(Boolean).forEach(function(p){
-    if(!callNumber && SIP_RE.test(p)){ callNumber = p; return; }
-    if(!callDuration && CALLDUR_RE.test(p)){ callDuration = p; return; }
-    var pi = p.indexOf('|');
-    if(pi !== -1 && !callDuration){ callDuration = p.slice(0,pi).trim(); callChannel = p.slice(pi+1).trim(); return; }
-    if(!callChannel && p) callChannel = p;
+    if(!callNumber&&SIP_RE.test(p)){ callNumber=p; return; }
+    if(!callDuration&&CALLDUR_RE.test(p)){ callDuration=p; return; }
+    var pi=p.indexOf('|');
+    if(pi!==-1&&!callDuration){ callDuration=p.slice(0,pi).trim(); callChannel=p.slice(pi+1).trim(); return; }
+    if(!callChannel&&p) callChannel=p;
   });
-  var agentSID = '', provider = '', department = '';
-  for(var i = 2; i < cols.length; i++){
-    var c = cols[i].trim(); if(!c) continue;
-    if(!agentSID && SID_RE.test(c)){ agentSID = c; continue; }
-    if(!provider && isProviderLike(c)){ provider = c; continue; }
-    if(!department && isDeptLike(c)){ department = c; continue; }
-    if(i === 3 && !agentSID) agentSID = c;
-    else if(i === 4 && !provider) provider = c;
-    else if(i === 5 && !department) department = c;
+  var agentSID='',provider='',department='';
+  for(var i=2;i<cols.length;i++){
+    var c=cols[i].trim(); if(!c) continue;
+    if(!agentSID&&SID_RE.test(c)){ agentSID=c; continue; }
+    if(!provider&&isProviderLike(c)){ provider=c; continue; }
+    if(!department&&isDeptLike(c)){ department=c; continue; }
+    if(i===3&&!agentSID) agentSID=c; else if(i===4&&!provider) provider=c; else if(i===5&&!department) department=c;
   }
   return makeEntry(name,status,statusDuration,callNumber,callDuration,callChannel,agentSID,provider,department);
 }
-
 function parseLineBlock(lines){
   var name='',status='',statusDuration='',callNumber='',callDuration='',callChannel='',agentSID='',provider='',department='';
   lines.forEach(function(ln){
     ln.split('|').map(function(p){ return p.trim(); }).filter(Boolean).forEach(function(p){
-      if(!name && isAgentName(p)){ name = p; return; }
-      if(!status && STATUS_RE.test(p)){ status = p; return; }
-      if(!statusDuration && STATDUR_RE.test(p)){ statusDuration = p; return; }
-      if(!callNumber && SIP_RE.test(p)){ callNumber = p; return; }
-      if(!callDuration && CALLDUR_RE.test(p)){ callDuration = p; return; }
-      if(!agentSID && SID_RE.test(p)){ agentSID = p; return; }
-      if(!provider && isProviderLike(p)){ provider = p; return; }
-      if(!department && isDeptLike(p)){ department = p; return; }
+      if(!name&&isAgentName(p)){ name=p; return; }
+      if(!status&&STATUS_RE.test(p)){ status=p; return; }
+      if(!statusDuration&&STATDUR_RE.test(p)){ statusDuration=p; return; }
+      if(!callNumber&&SIP_RE.test(p)){ callNumber=p; return; }
+      if(!callDuration&&CALLDUR_RE.test(p)){ callDuration=p; return; }
+      if(!agentSID&&SID_RE.test(p)){ agentSID=p; return; }
+      if(!provider&&isProviderLike(p)){ provider=p; return; }
+      if(!department&&isDeptLike(p)){ department=p; return; }
     });
   });
   if(!name) return null;
   return makeEntry(name,status,statusDuration,callNumber,callDuration,callChannel,agentSID,provider,department);
 }
-
 function makeEntry(name,status,statusDuration,callNumber,callDuration,callChannel,agentSID,provider,department){
-  return{
-    id:null, name:name, status:status||'Unknown', statusDuration:statusDuration,
+  return{ id:null, name:name, status:status||'Unknown', statusDuration:statusDuration,
     callNumber:callNumber, callDuration:callDuration, callChannel:callChannel,
-    date:today(), agentSID:agentSID,
-    provider:provider||'The Functionary',
-    department:department||'Greyhound Telesales',
-    addedBy:''
-  };
+    date:today(), agentSID:agentSID, provider:provider||'The Functionary',
+    department:department||'Greyhound Telesales', addedBy:'',
+    completed:false, completedBy:'', completedAt:'' };
 }
-
 function isHeader(l){ return /^(agent\b|calls\b|messages\b|service\s*provider|department|agent\s*sid)/i.test(l.trim()); }
 function isAgentName(s){
   if(!s||s.length<2||s.length>70) return false;
@@ -963,96 +952,83 @@ function isAgentName(s){
   return /[A-Za-zÀ-ÿ]/.test(s);
 }
 function isProviderLike(s){ if(!s) return false; if(/^the\s+\w/i.test(s)) return true; if(/functionary|teletech|telus|teleperformance|concentrix|ttec/i.test(s)) return true; return false; }
-function isDeptLike(s){ return s ? /telesales|customer\s*support|sales|support|helpdesk|greyhound/i.test(s) : false; }
-
+function isDeptLike(s){ return s?/telesales|customer\s*support|sales|support|helpdesk|greyhound/i.test(s):false; }
 function renderPreview(rows){
-  document.getElementById('previewTable').innerHTML =
-    '<thead><tr><th>Name</th><th>Status</th><th>Duration</th><th>Call Number</th><th>Date</th><th>Dept</th></tr></thead><tbody>' +
-    rows.map(function(r){
-      return '<tr><td>'+esc(r.name)+'</td><td>'+esc(r.status)+'</td><td>'+(esc(r.statusDuration)||'—')+'</td><td>'+(r.callNumber?esc(r.callNumber.slice(0,22))+'…':'—')+'</td><td>'+esc(r.date)+'</td><td>'+esc(r.department)+'</td></tr>';
-    }).join('') + '</tbody>';
-  document.getElementById('previewWrap').style.display = 'block';
+  document.getElementById('previewTable').innerHTML='<thead><tr><th>Name</th><th>Status</th><th>Duration</th><th>Call Number</th><th>Date</th><th>Dept</th></tr></thead><tbody>'+
+    rows.map(function(r){ return '<tr><td>'+esc(r.name)+'</td><td>'+esc(r.status)+'</td><td>'+(esc(r.statusDuration)||'—')+'</td><td>'+(r.callNumber?esc(r.callNumber.slice(0,22))+'…':'—')+'</td><td>'+esc(r.date)+'</td><td>'+esc(r.department)+'</td></tr>'; }).join('')+'</tbody>';
+  document.getElementById('previewWrap').style.display='block';
 }
 function setPSt(type,html){
-  var el = document.getElementById('parseStatus');
-  if(!type){ el.style.display = 'none'; return; }
-  el.className = 'pstatus ' + type; el.innerHTML = html; el.style.display = 'block';
+  var el=document.getElementById('parseStatus');
+  if(!type){ el.style.display='none'; return; }
+  el.className='pstatus '+type; el.innerHTML=html; el.style.display='block';
 }
 
 // ══════════════════════════════════════════════════
 // RENDER
 // ══════════════════════════════════════════════════
 function renderAll(){
-  var has = data.length > 0;
-  document.getElementById('importZone').style.display  = has ? 'none' : '';
-  document.getElementById('statsBar').style.display    = has ? 'flex' : 'none';
-  document.getElementById('infoBar').style.display     = has ? 'flex' : 'none';
-  document.getElementById('filterBar').style.display   = has ? ''     : 'none';
-  document.getElementById('tableWrap').style.display   = has ? ''     : 'none';
-  document.getElementById('clearAllBtn').style.display = isAdmin && has ? '' : 'none';
+  var has=data.length>0;
+  document.getElementById('importZone').style.display  = has?'none':'';
+  document.getElementById('statsBar').style.display    = has?'flex':'none';
+  document.getElementById('infoBar').style.display     = has?'flex':'none';
+  document.getElementById('filterBar').style.display   = has?'':'none';
+  document.getElementById('tableWrap').style.display   = has?'':'none';
+  var cb=document.getElementById('clearAllBtn'); if(cb) cb.style.display=isAdmin&&has?'':'none';
+  document.getElementById('infoCount').textContent=data.length;
   updateStats(); updateDeptFilter(); renderTable(getFiltered());
 }
-
 function updateStats(){
-  document.getElementById('statTotal').textContent     = data.length;
-  document.getElementById('statBusy').textContent      = data.filter(function(r){ return /busy/i.test(r.status); }).length;
-  document.getElementById('statReady').textContent     = data.filter(function(r){ return /^ready$/i.test(r.status); }).length;
-  document.getElementById('statBreak').textContent     = data.filter(function(r){ return /^break$/i.test(r.status); }).length;
-  document.getElementById('statCompleted').textContent = data.filter(function(r){ return !!r.completed; }).length;
+  document.getElementById('statTotal').textContent =data.length;
+  document.getElementById('statBusy').textContent  =data.filter(function(r){ return /busy/i.test(r.status); }).length;
+  document.getElementById('statReady').textContent =data.filter(function(r){ return /^ready$/i.test(r.status); }).length;
+  document.getElementById('statBreak').textContent =data.filter(function(r){ return /^break$/i.test(r.status); }).length;
 }
-
 function updateDeptFilter(){
-  var sel   = document.getElementById('deptFilter');
-  var cur   = sel.value;
-  var depts = [];
-  data.forEach(function(r){ if(r.department && depts.indexOf(r.department) === -1) depts.push(r.department); });
+  var sel=document.getElementById('deptFilter'),cur=sel.value,depts=[];
+  data.forEach(function(r){ if(r.department&&depts.indexOf(r.department)===-1) depts.push(r.department); });
   depts.sort();
-  sel.innerHTML = '<option value="">All Departments</option>' +
-    depts.map(function(d){ return '<option value="'+esc(d)+'">'+esc(d)+'</option>'; }).join('');
-  sel.value = cur;
+  sel.innerHTML='<option value="">All Departments</option>'+depts.map(function(d){ return '<option value="'+esc(d)+'">'+esc(d)+'</option>'; }).join('');
+  sel.value=cur;
 }
-
-function sortTable(key){ sortDir = sortKey === key ? sortDir * -1 : 1; sortKey = key; renderTable(getFiltered()); }
+function sortTable(key){ sortDir=sortKey===key?sortDir*-1:1; sortKey=key; renderTable(getFiltered()); }
 function filterTable(){ renderTable(getFiltered()); }
-
 function getFiltered(){
-  var s  = document.getElementById('searchInput').value.toLowerCase();
-  var st = document.getElementById('statusFilter').value.toLowerCase();
-  var d  = document.getElementById('deptFilter').value;
-  var dt = document.getElementById('dateFilter').value;
-  var cf = document.getElementById('completedFilter').value;
+  var s  =document.getElementById('searchInput').value.toLowerCase();
+  var st =document.getElementById('statusFilter').value.toLowerCase();
+  var d  =document.getElementById('deptFilter').value;
+  var dt =document.getElementById('dateFilter').value;
+  var cf =document.getElementById('completedFilter').value;
   return data.filter(function(r){
-    return (!s  || r.name.toLowerCase().indexOf(s) !== -1) &&
-           (!st || r.status.toLowerCase().indexOf(st) !== -1) &&
-           (!d  || r.department === d) &&
-           (!dt || r.date === dt) &&
-           (!cf || (cf === 'completed' ? r.completed : !r.completed));
+    return (!s  ||r.name.toLowerCase().indexOf(s)!==-1)&&
+           (!st ||r.status.toLowerCase().indexOf(st)!==-1)&&
+           (!d  ||r.department===d)&&(!dt||r.date===dt)&&
+           (!cf ||(cf==='done'?r.completed:!r.completed));
   });
 }
-
 function clearFilters(){
-  ['searchInput','statusFilter','deptFilter','dateFilter','completedFilter'].forEach(function(id){ document.getElementById(id).value = ''; });
+  ['searchInput','statusFilter','deptFilter','completedFilter','dateFilter'].forEach(function(id){ document.getElementById(id).value=''; });
   filterTable();
 }
-
 function renderTable(rows){
-  if(sortKey) rows = rows.slice().sort(function(a,b){
-    var av = (a[sortKey]||'').toLowerCase(), bv = (b[sortKey]||'').toLowerCase();
-    return av < bv ? -sortDir : av > bv ? sortDir : 0;
+  if(sortKey) rows=rows.slice().sort(function(a,b){
+    var av=(String(a[sortKey]||'')).toLowerCase(),bv=(String(b[sortKey]||'')).toLowerCase();
+    return av<bv?-sortDir:av>bv?sortDir:0;
   });
-  var tbody = document.getElementById('tableBody');
-  document.getElementById('rowCount').textContent = rows.length + ' record' + (rows.length !== 1 ? 's' : '');
-  document.getElementById('noResults').style.display = rows.length ? 'none' : '';
-  if(!rows.length){ tbody.innerHTML = ''; return; }
-  tbody.innerHTML = rows.map(function(r, i){
-    var ini = r.name.split(' ').slice(0,2).map(function(w){ return w[0]||''; }).join('').toUpperCase();
-    var sc  = /busy/i.test(r.status) ? 'busy' : /^ready$/i.test(r.status) ? 'ready' : /^break$/i.test(r.status) ? 'break' : 'offline';
-    var hue = r.name.charCodeAt(0) % 360;
-    var rid = r.id;
-    var isDone = !!r.completed;
-    return '<tr class="'+(isDone?'row-completed':'')+'" style="animation-delay:' + i * .025 + 's">' +
+  var tbody=document.getElementById('tableBody');
+  document.getElementById('rowCount').textContent=rows.length+' record'+(rows.length!==1?'s':'');
+  document.getElementById('noResults').style.display=rows.length?'none':'';
+  if(!rows.length){ tbody.innerHTML=''; return; }
+  tbody.innerHTML=rows.map(function(r,i){
+    var ini=r.name.split(' ').slice(0,2).map(function(w){ return w[0]||''; }).join('').toUpperCase();
+    var sc=/busy/i.test(r.status)?'busy':/^ready$/i.test(r.status)?'ready':/^break$/i.test(r.status)?'break':'offline';
+    var hue=r.name.charCodeAt(0)%360;
+    var isDone=!!r.completed;
+    var rid=r.id;
+    var rowStyle=isDone?'opacity:.6;':'';
+    return '<tr style="animation-delay:'+i*.025+'s;'+rowStyle+'">' +
       '<td><div class="agent-cell"><div class="avatar" style="background:linear-gradient(135deg,hsl('+hue+',60%,55%),hsl('+(hue+40)+',60%,40%))">'+ini+'</div>' +
-      '<div><div class="agent-name">'+esc(r.name)+'</div>'+(r.agentSID?'<div class="agent-id">'+esc(r.agentSID.slice(0,18))+'…</div>':'')+'</div></div></td>' +
+      '<div><div class="agent-name"'+(isDone?' style="text-decoration:line-through;color:var(--muted)"':'')+'>'+esc(r.name)+'</div>'+(r.agentSID?'<div class="agent-id">'+esc(r.agentSID.slice(0,18))+'…</div>':'')+'</div></div></td>' +
       '<td><span class="sbadge s-'+sc+'"><span class="sdot"></span>'+esc(r.status)+'</span>'+(r.statusDuration?'<div class="mono-sm" style="margin-top:3px">'+esc(r.statusDuration)+'</div>':'')+'</td>' +
       '<td class="sip">'+(r.callNumber?esc(r.callNumber):'<span style="color:var(--border2)">—</span>')+'</td>' +
       '<td>'+(r.callDuration?'<span class="mono-sm" style="color:var(--text)">'+esc(r.callDuration)+'</span>':'<span style="color:var(--border2)">—</span>')+(r.callChannel?'<div class="mono-sm">'+esc(r.callChannel)+'</div>':'')+'</td>' +
@@ -1060,17 +1036,9 @@ function renderTable(rows){
       '<td><span class="dept-badge">'+esc(r.department||'—')+'</span></td>' +
       '<td class="mono-sm">'+esc(r.provider||'—')+'</td>' +
       '<td class="mono-sm">'+esc(r.addedBy||'—')+'</td>' +
-      '<td>' +
-        (isDone
-          ? '<span class="completed-badge">✅ Done</span>' +
-            (r.completedBy ? '<div class="mono-sm" style="margin-top:3px;color:var(--green)">'+esc(r.completedBy)+'</div>' : '') +
-            (r.completedAt ? '<div class="mono-sm">'+esc(r.completedAt)+'</div>' : '')
-          : '<span style="color:var(--muted);font-size:11px">⏳ Pending</span>') +
-      '</td>' +
+      '<td>'+(isDone?'<span class="completed-badge">✅ Done</span><div class="mono-sm" style="color:var(--green);margin-top:3px">'+esc(r.completedBy)+'</div><div class="mono-sm">'+esc(r.completedAt)+'</div>':'<span style="color:var(--muted);font-size:11px">⏳ Pending</span>')+'</td>' +
       '<td><div class="actions-cell">' +
-        (window.userCanComplete
-          ? '<button class="complete-btn'+(isDone?' done':'')+'" onclick="toggleComplete('+JSON.stringify(rid)+')" title="'+(isDone?'Unmark':'Mark as completed')+'">'+(isDone?'✅ Done':'☑ Complete')+'</button>'
-          : '<span style="color:var(--border2);font-size:11px">—</span>') +
+        (userCanComplete?'<button class="complete-btn'+(isDone?' done':'')+'" onclick="toggleComplete('+JSON.stringify(rid)+')">'+(isDone?'✅ Done':'☑ Complete')+'</button>':'') +
         (isAdmin?'<button class="icon-btn" onclick="deleteEntry('+JSON.stringify(rid)+')">✕</button>':'') +
       '</div></td>' +
       '</tr>';
@@ -1081,72 +1049,47 @@ function renderTable(rows){
 // EXPORT
 // ══════════════════════════════════════════════════
 function exportCSV(){
-  var rows = getFiltered();
-  if(!rows.length){ showToast('No data to export.','error'); return; }
-  var h   = ['Name','Status','StatusDuration','CallNumber','CallDuration','CallChannel','Date','AgentSID','Provider','Department','AddedBy'];
-  var csv = [h.join(',')].concat(rows.map(function(r){
-    return [r.name,r.status,r.statusDuration,r.callNumber,r.callDuration,r.callChannel,r.date,r.agentSID,r.provider,r.department,r.addedBy]
+  var rows=getFiltered(); if(!rows.length){ showToast('No data.','error'); return; }
+  var h=['Name','Status','StatusDuration','CallNumber','CallDuration','CallChannel','Date','AgentSID','Provider','Department','AddedBy','Completed','CompletedBy','CompletedAt'];
+  var csv=[h.join(',')].concat(rows.map(function(r){
+    return [r.name,r.status,r.statusDuration,r.callNumber,r.callDuration,r.callChannel,r.date,r.agentSID,r.provider,r.department,r.addedBy,r.completed?'Yes':'No',r.completedBy||'',r.completedAt||'']
       .map(function(v){ return '"'+(v||'').replace(/"/g,'""')+'"'; }).join(',');
   })).join('\n');
-  var a = document.createElement('a');
-  a.href = 'data:text/csv,' + encodeURIComponent(csv);
-  a.download = 'teams-calls-' + today() + '.csv';
+  var a=document.createElement('a');
+  a.href='data:text/csv,'+encodeURIComponent(csv);
+  a.download='teams-calls-'+today()+'.csv';
   a.click();
-  showToast('✓ CSV exported!', 'success');
+  showToast('✓ CSV exported!','success');
 }
 
 // ══════════════════════════════════════════════════
-// MODALS
+// MODALS / UI
 // ══════════════════════════════════════════════════
 function openModal(id){
   document.getElementById(id).classList.add('open');
-  if(id === 'manualModal') document.getElementById('m_date').value = today();
-  if(id === 'pasteModal')  setTimeout(function(){ document.getElementById('pasteInput').focus(); }, 120);
+  if(id==='manualModal') document.getElementById('m_date').value=today();
+  if(id==='pasteModal')  setTimeout(function(){ document.getElementById('pasteInput').focus(); },120);
 }
-function closeModal(id){
-  document.getElementById(id).classList.remove('open');
-  if(id === 'pasteModal') clearPaste();
-}
-document.querySelectorAll('.modal-backdrop').forEach(function(el){
-  el.addEventListener('click', function(e){ if(e.target === el) closeModal(el.id); });
-});
+function closeModal(id){ document.getElementById(id).classList.remove('open'); if(id==='pasteModal') clearPaste(); }
+document.querySelectorAll('.modal-backdrop').forEach(function(el){ el.addEventListener('click',function(e){ if(e.target===el) closeModal(el.id); }); });
 
-// ══════════════════════════════════════════════════
-// UTILS
-// ══════════════════════════════════════════════════
-function setConn(state, msg){
-  var dot = document.getElementById('connDot'), txt = document.getElementById('connText');
-  dot.className  = 'conn-dot ' + (state==='ok'?'ok':state==='busy'?'busy':'err');
-  txt.textContent = msg;
-  txt.style.color = state==='ok'?'var(--green)':state==='busy'?'var(--yellow)':'var(--red)';
+function setConn(s,msg){
+  var dot=document.getElementById('connDot'),txt=document.getElementById('connText');
+  if(!dot||!txt) return;
+  dot.className='conn-dot '+(s==='ok'?'ok':s==='busy'?'busy':'err');
+  txt.textContent=msg;
+  txt.style.color=s==='ok'?'var(--green)':s==='busy'?'var(--yellow)':'var(--red)';
 }
-function showLoading(msg){ document.getElementById('loadingText').textContent = msg; document.getElementById('loadingOverlay').style.display = 'flex'; }
-function hideLoading(){ document.getElementById('loadingOverlay').style.display = 'none'; }
-function showEl(id){
-  var el = document.getElementById(id);
-  if(!el) return;
-  el.style.display = (id==='loginScreen'||id==='accessDeniedScreen') ? 'flex' : 'block';
-}
-function hideEl(id){ document.getElementById(id).style.display = 'none'; }
-function showToast(msg, type){
-  var t = document.getElementById('toast');
-  if(!t){ console.warn('Toast:', msg); return; }
-  t.textContent = msg; t.className = type || 'success'; t.style.display = 'block';
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(function(){ t.style.display = 'none'; }, 4000);
-}
-function requestAccess(){
-  // Build email in JS so Cloudflare can't obfuscate it
-  var user   = 'erick.bonilla';
-  var domain = 'thefunctionary.com';
-  var denied = document.getElementById('accessDeniedEmail');
-  var who    = denied ? denied.textContent : '';
-  var subject = encodeURIComponent('Teams Dashboard Access Request');
-  var body    = encodeURIComponent('Hi Erick,\n\nI would like to request access to the Teams Call Dashboard.\n\nMy email: ' + who);
-  window.location.href = 'mailto:' + user + '@' + domain + '?subject=' + subject + '&body=' + body;
-}
-  var d = new Date();
-  var y = d.getFullYear();
-  var m = String(d.getMonth()+1).padStart(2,'0');
-  var day = String(d.getDate()).padStart(2,'0');
-  return y + '-' + m + '-' +
+function showLoading(msg){ document.getElementById('loadingText').textContent=msg||'Loading…'; document.getElementById('loadingOverlay').style.display='flex'; }
+function hideLoading(){ document.getElementById('loadingOverlay').style.display='none'; }
+function showEl(id){ var el=document.getElementById(id); if(!el) return; el.style.display=(id==='loginScreen'||id==='accessDeniedScreen')?'flex':'block'; }
+function hideEl(id){ var el=document.getElementById(id); if(el) el.style.display='none'; }
+function showToast(msg,type){ var t=document.getElementById('toast'); if(!t) return; t.textContent=msg; t.className=type||'success'; t.style.display='block'; clearTimeout(toastTimer); toastTimer=setTimeout(function(){ t.style.display='none'; },4000); }
+function requestAccess(){ var who=document.getElementById('accessDeniedEmail'); var e='erick.bonilla'+'@'+'thefunctionary.com'; window.location.href='mailto:'+e+'?subject='+encodeURIComponent('Teams Dashboard Access Request')+'&body='+encodeURIComponent('Hi Erick,\n\nI would like to request access.\n\nMy email: '+(who?who.textContent:'')); }
+function today(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+window.onload = function(){ init(); };
+</script>
+</body>
+</html>
