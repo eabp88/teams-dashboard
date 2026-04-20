@@ -4,7 +4,6 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://alcdn.msauth.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src https://login.microsoftonline.com https://graph.microsoft.com https://thefunctionary-my.sharepoint.com; img-src 'self' data:;">
 <title>Teams Call Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js" crossorigin="anonymous"></script>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
@@ -400,8 +399,8 @@ var OWNER_EMAILS = [
 // TEAM MEMBERS: can mark calls as complete, view data
 // Add colleague emails here — one per line
 var TEAM_EMAILS = [
-  'Andres.Staben@thefunctionary.com',
-  'jose.amaya@thefunctionary.com',
+  // 'colleague1@thefunctionary.com',
+  // 'colleague2@thefunctionary.com',
 ];
 // Everyone else who signs in can only VIEW (read-only)
 function initMsal(){
@@ -427,35 +426,41 @@ var appAborted = false;
 
 async function init(){
   appAborted = false;
-  showLoading('Checking login…');
-  if(!initMsal()){ hideLoading(); showEl('loginScreen'); return; }
 
-  // If still loading after 6s — give up and show login screen
-  var initTimeout = setTimeout(function(){
-    appAborted = true;
-    hideLoading();
-    showEl('loginScreen');
-    console.warn('MSAL timed out');
-  }, 6000);
+  // Show login screen IMMEDIATELY — never show loading spinner on first load
+  hideLoading();
+  showEl('loginScreen');
 
+  if(!initMsal()) return;
+
+  // Silently check if already logged in (no spinner, no blocking)
   try{
-    await msalApp.handleRedirectPromise();
+    var redirectResult = await Promise.race([
+      msalApp.handleRedirectPromise(),
+      new Promise(function(resolve){ setTimeout(resolve, 5000, null); }) // 5s max
+    ]);
+
     if(appAborted) return;
-    clearTimeout(initTimeout);
+
+    // If redirect just completed, account will be in result
+    if(redirectResult && redirectResult.account){
+      account = redirectResult.account;
+      hideEl('loginScreen');
+      await startApp();
+      return;
+    }
+
+    // Check for existing cached session
     var accounts = msalApp.getAllAccounts();
     if(accounts.length > 0){
       account = accounts[0];
+      hideEl('loginScreen');
       await startApp();
-    } else {
-      hideLoading();
-      showEl('loginScreen');
     }
+    // Otherwise stay on login screen — user clicks Sign In
   } catch(e){
-    if(appAborted) return;
-    clearTimeout(initTimeout);
-    hideLoading();
-    showEl('loginScreen');
-    console.warn('Auth error:', e.message);
+    console.warn('MSAL init error:', e.message);
+    // Stay on login screen
   }
 }
 
@@ -514,7 +519,6 @@ async function startApp(){
     var me    = await graphFetch('GET', '/me?$select=displayName,userPrincipalName,id');
     var name  = me.displayName || me.userPrincipalName || 'User';
     var email = (me.userPrincipalName || '').toLowerCase();
-
     // ── CHECK ACCESS FIRST before showing anything ───
     var isOwner  = OWNER_EMAILS.map(function(e){ return e.toLowerCase(); }).indexOf(email) !== -1;
     var isMember = isOwner || TEAM_EMAILS.map(function(e){ return e.toLowerCase(); }).indexOf(email) !== -1;
