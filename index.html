@@ -332,7 +332,7 @@
       <div class="form-field"><label>Status *</label>
         <select id="m_status"><option>Busy Calls</option><option>Ready</option><option>Break</option><option>Offline</option></select></div>
       <div class="form-field"><label>Status Duration</label><input id="m_statusDur" type="text" placeholder="10:23"/></div>
-      <div class="form-field"><label>Call Number (SIP)</label><input id="m_callNum" type="text" placeholder="sip:+17025638631@..."/></div>
+      <div class="form-field"><label>Call Number (SIP)</label><input id="m_callNum" type="text" placeholder="sip:+17025638631@twilio"/></div>
       <div class="form-field"><label>Call Duration</label><input id="m_callDur" type="text" placeholder="10m"/></div>
       <div class="form-field"><label>Call Channel</label><input id="m_channel" type="text" placeholder="greyhound_fares"/></div>
       <div class="form-field"><label>Date *</label><input id="m_date" type="date"/></div>
@@ -369,7 +369,8 @@
 var CLIENT_ID    = '198a4127-4ad2-4d32-a0cb-beb6d48b3bb0';
 var TENANT_ID    = '88d97709-f0ea-4a21-86f3-f603d653e7c9';
 // Owner's email address — all data stored in their OneDrive
-var OWNER_EMAIL  = 'erick.bonilla@thefunctionary.com';
+// Owner email built in parts so Cloudflare cannot detect and obfuscate it
+var OWNER_EMAIL = (function(){ return 'erick.bonilla' + '@' + 'thefunctionary.com'; })();
 var OWNER_ID     = '423b73fc-2cdd-48da-a657-dba86e064f62'; // used for admin check only
 var FOLDER_NAME  = 'Twillio Calls Repository';
 var FILE_NAME    = 'teamcalldata.json';
@@ -394,13 +395,13 @@ var parseTimer = null;
 // ══════════════════════════════════════════════════
 // OWNER: can paste data, add, delete, clear all
 var OWNER_EMAILS = [
-  'erick.bonilla@thefunctionary.com'
+  'erick.bonilla' + '@' + 'thefunctionary.com'
 ];
 // TEAM MEMBERS: can mark calls as complete, view data
 // Add colleague emails here — one per line
 var TEAM_EMAILS = [
-  // 'colleague1@thefunctionary.com',
-  // 'colleague2@thefunctionary.com',
+  // Add team member emails below, e.g:
+  // 'firstname.lastname' + '@' + 'thefunctionary.com',
 ];
 // Everyone else who signs in can only VIEW (read-only)
 function initMsal(){
